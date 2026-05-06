@@ -12,6 +12,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { MarkdownSerializer } from 'prosemirror-markdown';
 import { t } from '../../i18n';
+import { serializeRange } from '../utils/serializeRange';
 
 export interface ContextMenuController {
   extension: Extension;
@@ -97,10 +98,7 @@ export function createContextMenu(opts: ContextMenuOptions): ContextMenuControll
       // 全文
       md = serializer.serialize(editorRef.state.doc);
     } else {
-      // 选区切片：用 slice.content（一个 Fragment）包成临时 doc
-      const slice = editorRef.state.doc.slice(range.from, range.to);
-      const tmpDoc = editorRef.state.schema.topNodeType.create(null, slice.content);
-      md = serializer.serialize(tmpDoc);
+      md = serializeRange(editorRef.state, range.from, range.to, serializer);
     }
     if (!md.endsWith('\n')) md += '\n';
     writeClipboard(md);

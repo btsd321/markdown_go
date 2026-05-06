@@ -11,6 +11,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { MarkdownSerializer } from 'prosemirror-markdown';
 import type { CopyFormat } from '../../../shared';
+import { serializeRange } from '../utils/serializeRange';
 
 export interface ClipboardCopyController {
   extension: Extension;
@@ -29,9 +30,7 @@ export function createClipboardCopy(opts: ClipboardCopyOptions): ClipboardCopyCo
   function writeMarkdown(view: { state: any }, ev: ClipboardEvent): boolean {
     const { from, to, empty } = view.state.selection;
     if (empty) return false;
-    const slice = view.state.doc.slice(from, to);
-    const tmpDoc = view.state.schema.topNodeType.create(null, slice.content);
-    let md = opts.getSerializer().serialize(tmpDoc);
+    let md = serializeRange(view.state, from, to, opts.getSerializer());
     if (md.endsWith('\n')) md = md.slice(0, -1);
     if (!ev.clipboardData) return false;
     ev.clipboardData.setData('text/plain', md);
