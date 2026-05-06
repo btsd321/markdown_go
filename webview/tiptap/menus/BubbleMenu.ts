@@ -1,22 +1,29 @@
 /**
- * 选区浮动工具栏（BubbleMenu）
+ * 编辑栏（EditToolbar）—— 选区非空时由右键触发的浮动格式化工具栏
  *
- * 功能：
- *   - 块类型下拉：段落 / H1 / H2 / H3 / 无序 / 有序 / 引用 / 代码块
- *   - 内联格式：B / I / S / 行内代码
+ * 改造自原 BubbleMenu：
+ *   - 不再随选区自动浮出（tippy 移除）
+ *   - 由 ContextMenu 在右键非空选区时调用 `showAt(x, y)` 主动显示
+ *   - 选区变更 / 点击外部 / Esc / 滚动 / resize 自动隐藏
  *
- * 实现：用 @tiptap/extension-bubble-menu 提供的定位机制，DOM 自定义。
+ * 含两组：
+ *   1. 块类型下拉 `T ▾`：段落 / H1-H3 / 无序 / 有序 / 引用 / 代码块
+ *      + 三项"合并"：合并为无序列表（单项）/ 合并为有序列表（单项）/ 合并为代码块
+ *   2. 内联：B / I / S / `<>`
+ *
+ * 注：导出名仍叫 createBubbleMenu / BubbleMenuFactory 以减少调用方修改。
  */
+import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
-import BubbleMenu from '@tiptap/extension-bubble-menu';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import { t, onLocaleChange } from '../../i18n';
 
 interface BlockTypeItem {
   key: string;
-  /** 本地化 label 的接口 */
   getLabel(): string;
-  isActive: (e: Editor) => boolean;
+  isActive?: (e: Editor) => boolean;
   apply: (e: Editor) => void;
+  separatorBefore?: boolean;
 }
 
 const BLOCK_TYPES: BlockTypeItem[] = [
@@ -68,12 +75,27 @@ const BLOCK_TYPES: BlockTypeItem[] = [
     isActive: (e) => e.isActive('codeBlock'),
     apply: (e) => e.chain().focus().toggleCodeBlock().run(),
   },
+  {
+    key: 'merge-ul',
+    getLabel: () => t('block.mergeUL'),
+    apply: (e) => mergeSelectionIntoSingleListItem(e, 'bulletList'),
+    separatorBefore: true,
+  },
+  {
+    key: 'merge-ol',
+    getLabel: () => t('block.mergeOL'),
+    apply: (e) => mergeSelectionIntoSingleListItem(e, 'orderedList'),
+  },
+  {
+    key: 'merge-code',
+    getLabel: () => t('block.mergeCode'),
+    apply: (e) => mergeSelectionIntoCodeBlock(e),
+  },
 ];
 
 interface InlineItem {
   key: string;
   label: string;
-  /** 本地化 title 的接口 */
   getTitle(): string;
   isActive: (e: Editor) => boolean;
   apply: (e: Editor) => void;
@@ -111,12 +133,13 @@ const INLINES: InlineItem[] = [
 ];
 
 export interface BubbleMenuFactory {
-  /** Tiptap 扩展实例（注入到 editor extensions） */
-  extension: ReturnType<typeof BubbleMenu.configure>;
-  /** DOM 容器（已挂入 document.body） */
+  /** 占位扩展（保持调用方接口兼容） */
+  extension: Extension;
   element: HTMLElement;
-  /** 在 editor 创建后绑定 */
   bind(editor: Editor): void;
+  /** 在屏幕坐标处显示编辑栏 */
+  showAt(x: number, y: number): void;
+  hide(): void;
   destroy(): void;
 }
 
@@ -124,14 +147,18 @@ export function createBubbleMenu(): BubbleMenuFactory {
   const element = document.createElement('div');
   element.className = 'bubble-menu';
   element.style.display = 'none';
-  // 初始 DOM——按钮在 bind() 后才能正确响应
+  element.style.position = 'fixed';
+  element.style.zIndex = '1500';
+
   const typeWrap = document.createElement('div');
   typeWrap.className = 'bubble-group bubble-group-type';
   const typeBtn = document.createElement('button');
   typeBtn.type = 'button';
   typeBtn.className = 'bubble-btn bubble-type-btn';
   typeBtn.title = t('bubble.typeBtnTitle');
-  typeBtn.innerHTML = `<span class="bubble-type-label">${t('block.paragraph')}</span><span class="bubble-caret">▾</span>`;
+  typeBtn.innerHTML =
+    `<span class="bubble-type-label">${t('block.paragraph')}</span>` +
+    `<span class="bubble-caret">▾</span>`;
   const typeMenu = document.createElement('div');
   typeMenu.className = 'bubble-type-menu';
   typeMenu.style.display = 'none';
@@ -147,14 +174,15 @@ export function createBubbleMenu(): BubbleMenuFactory {
   const inlineItemEls: { item: InlineItem; el: HTMLElement }[] = [];
 
   let editorRef: Editor | null = null;
-  let menuOpen = false;
+  let visible = false;
+  let typeMenuOpen = false;
 
   const closeTypeMenu = () => {
-    menuOpen = false;
+    typeMenuOpen = false;
     typeMenu.style.display = 'none';
   };
   const openTypeMenu = () => {
-    menuOpen = true;
+    typeMenuOpen = true;
     typeMenu.style.display = '';
     refreshActive();
   };
@@ -162,21 +190,19 @@ export function createBubbleMenu(): BubbleMenuFactory {
   typeBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (menuOpen) closeTypeMenu();
+    if (typeMenuOpen) closeTypeMenu();
     else openTypeMenu();
-  });
-
-  // 点击工具栏外关闭 dropdown
-  document.addEventListener('mousedown', (e) => {
-    if (!menuOpen) return;
-    if (element.contains(e.target as Node)) return;
-    closeTypeMenu();
   });
 
   function buildItems(editor: Editor) {
     typeMenu.innerHTML = '';
     typeItemEls.length = 0;
     for (const item of BLOCK_TYPES) {
+      if (item.separatorBefore) {
+        const sep = document.createElement('div');
+        sep.className = 'bubble-type-sep';
+        typeMenu.appendChild(sep);
+      }
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'bubble-type-item';
@@ -186,6 +212,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
         e.stopPropagation();
         item.apply(editor);
         closeTypeMenu();
+        hide();
       });
       typeMenu.appendChild(el);
       typeItemEls.push({ item, el });
@@ -214,7 +241,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
     if (!editorRef) return;
     let activeLabel = t('block.paragraph');
     for (const { item, el } of typeItemEls) {
-      const active = item.isActive(editorRef);
+      const active = item.isActive ? item.isActive(editorRef) : false;
       el.classList.toggle('is-active', active);
       if (active) activeLabel = item.getLabel();
     }
@@ -225,7 +252,119 @@ export function createBubbleMenu(): BubbleMenuFactory {
     }
   }
 
-  // 语言切换：重建项 + 刷新高亮 + 同步 typeBtn title
+  /**
+   * 在选区错位上方弹出。(x, y) 为选区“锔点”（处于选区顶部平均 x，
+   * top 为选区顶部 y）。实际位置在该点上方；如上方放不下则下移。
+   * 四边超出视口 8px 边距时自动裁切。
+   */
+  function showAt(x: number, y: number) {
+    if (!editorRef) return;
+    const sel = editorRef.state.selection;
+    if (sel.empty) return;
+    if (editorRef.isActive('latexBlock') || editorRef.isActive('mermaidBlock')) return;
+
+    visible = true;
+    closeTypeMenu();
+    refreshActive();
+    element.style.display = '';
+    // 先上屏再量尺寸，避免初始 0 宽高造成偏移
+    element.style.left = '0px';
+    element.style.top = '0px';
+    requestAnimationFrame(() => {
+      const r = element.getBoundingClientRect();
+      const margin = 8;
+      let nx = Math.round(x - r.width / 2);
+      let ny = Math.round(y - r.height - margin);
+      // 上方放不下 → 改放下方（距选区顶 ~24px，避开光标）
+      if (ny < margin) ny = Math.round(y + 24);
+      // 水平裁切
+      if (nx < margin) nx = margin;
+      if (nx + r.width > window.innerWidth - margin) {
+        nx = Math.max(margin, window.innerWidth - r.width - margin);
+      }
+      // 垂直裁切兼顾下边界
+      if (ny + r.height > window.innerHeight - margin) {
+        ny = Math.max(margin, window.innerHeight - r.height - margin);
+      }
+      element.style.left = `${nx}px`;
+      element.style.top = `${ny}px`;
+    });
+  }
+
+  /** 根据当前选区自动计算坐标并弹出 */
+  function showAtSelection() {
+    if (!editorRef) return;
+    const sel = editorRef.state.selection;
+    if (sel.empty) return;
+    if (editorRef.isActive('latexBlock') || editorRef.isActive('mermaidBlock')) return;
+    let startC: { left: number; top: number; right: number; bottom: number };
+    let endC: { left: number; top: number; right: number; bottom: number };
+    try {
+      startC = editorRef.view.coordsAtPos(sel.from);
+      endC = editorRef.view.coordsAtPos(sel.to);
+    } catch {
+      return;
+    }
+    const cx = (startC.left + endC.left) / 2;
+    const cy = startC.top;
+    showAt(cx, cy);
+  }
+
+  function hide() {
+    if (!visible) return;
+    visible = false;
+    closeTypeMenu();
+    element.style.display = 'none';
+  }
+
+  // 拖选期间不弹，抬鼠标后才评估
+  let isMouseDown = false;
+  let pendingAutoShow = false;
+
+  function scheduleAutoShow() {
+    if (isMouseDown) {
+      pendingAutoShow = true;
+      return;
+    }
+    if (!editorRef) return;
+    if (editorRef.state.selection.empty) {
+      hide();
+      return;
+    }
+    if (editorRef.isActive('latexBlock') || editorRef.isActive('mermaidBlock')) {
+      hide();
+      return;
+    }
+    showAtSelection();
+  }
+
+  document.addEventListener('mousedown', (e) => {
+    // 点击编辑栏内部 → 不作为“点外隐藏”也不作为选区拖动
+    if (element.contains(e.target as Node)) return;
+    isMouseDown = true;
+    if (visible) hide();
+  });
+  document.addEventListener('mouseup', () => {
+    if (!isMouseDown) return;
+    isMouseDown = false;
+    if (pendingAutoShow) {
+      pendingAutoShow = false;
+      // 让 PM 先提交 selectionUpdate
+      setTimeout(scheduleAutoShow, 0);
+    } else {
+      // 点击空白处释放：如果选区仍非空（如 shift+click）也试着弹
+      setTimeout(scheduleAutoShow, 0);
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (visible && e.key === 'Escape') {
+      e.stopPropagation();
+      hide();
+    }
+  });
+  window.addEventListener('resize', hide);
+  window.addEventListener('scroll', () => hide(), true);
+
   const offLocale = onLocaleChange(() => {
     typeBtn.title = t('bubble.typeBtnTitle');
     if (editorRef) {
@@ -234,23 +373,8 @@ export function createBubbleMenu(): BubbleMenuFactory {
     }
   });
 
-  const extension = BubbleMenu.configure({
-    element,
-    pluginKey: 'mg-bubble-menu',
-    tippyOptions: {
-      duration: 100,
-      placement: 'top',
-    },
-    shouldShow: ({ editor, state, from, to }) => {
-      // 仅在有非空选区时显示；选中 atom 节点时不显示（latex/mermaid 双击编辑）
-      if (from === to) return false;
-      if (editor.isActive('latexBlock') || editor.isActive('mermaidBlock')) return false;
-      // 选区跨度 > 0 但全是 atom 节点也跳过
-      const slice = state.doc.cut(from, to);
-      if (slice.content.size === 0) return false;
-      return true;
-    },
-  });
+  // 占位扩展：保留旧契约，但不再注入插件
+  const extension = Extension.create({ name: 'mgEditToolbarPlaceholder' });
 
   return {
     extension,
@@ -258,13 +382,128 @@ export function createBubbleMenu(): BubbleMenuFactory {
     bind(editor: Editor) {
       editorRef = editor;
       buildItems(editor);
-      editor.on('selectionUpdate', refreshActive);
-      editor.on('transaction', refreshActive);
+      editor.on('selectionUpdate', () => scheduleAutoShow());
+      editor.on('blur', () => {
+        // 点击到编辑器外部且不是编辑栏 → 隐藏
+        setTimeout(() => {
+          if (!editorRef) return;
+          const active = document.activeElement;
+          if (active && element.contains(active)) return;
+          hide();
+        }, 0);
+      });
       refreshActive();
     },
+    showAt,
+    hide,
     destroy() {
       offLocale();
       element.remove();
     },
   };
+}
+
+// ========== 合并辅助 ==========
+
+function mergeSelectionIntoSingleListItem(
+  editor: Editor,
+  listType: 'bulletList' | 'orderedList',
+): void {
+  const { state } = editor;
+  const { from, to } = state.selection;
+  const range = expandToBlockRange(state.doc, from, to);
+  if (!range) return;
+
+  const lines = collectInlineLines(state.doc, range.from, range.to);
+  if (lines.length === 0) return;
+
+  const schema = state.schema;
+  const ListType = schema.nodes[listType];
+  const ListItemType = schema.nodes.listItem;
+  const ParaType = schema.nodes.paragraph;
+  const HardBreakType = schema.nodes.hardBreak;
+  if (!ListType || !ListItemType || !ParaType) return;
+
+  const paraContent: PMNode[] = [];
+  lines.forEach((line, i) => {
+    if (i > 0 && HardBreakType) paraContent.push(HardBreakType.create());
+    if (line) paraContent.push(schema.text(line));
+  });
+  const paragraph = ParaType.create(null, paraContent);
+  const listItem = ListItemType.create(null, paragraph);
+  const list = ListType.create(null, listItem);
+
+  editor
+    .chain()
+    .focus()
+    .command(({ tr }) => {
+      tr.replaceWith(range.from, range.to, list);
+      return true;
+    })
+    .run();
+}
+
+function mergeSelectionIntoCodeBlock(editor: Editor): void {
+  const { state } = editor;
+  const { from, to } = state.selection;
+  const range = expandToBlockRange(state.doc, from, to);
+  if (!range) return;
+
+  const lines = collectInlineLines(state.doc, range.from, range.to);
+  const text = lines.join('\n');
+
+  const CodeType = state.schema.nodes.codeBlock;
+  if (!CodeType) return;
+  const node = text
+    ? CodeType.create({ language: null }, state.schema.text(text))
+    : CodeType.create({ language: null });
+
+  editor
+    .chain()
+    .focus()
+    .command(({ tr }) => {
+      tr.replaceWith(range.from, range.to, node);
+      return true;
+    })
+    .run();
+}
+
+function expandToBlockRange(
+  doc: PMNode,
+  from: number,
+  to: number,
+): { from: number; to: number } | null {
+  const $from = doc.resolve(from);
+  const $to = doc.resolve(to);
+  if ($from.depth < 1 || $to.depth < 1) return null;
+  const start = $from.before(1);
+  const end = $to.after(1);
+  return { from: start, to: end };
+}
+
+function collectInlineLines(doc: PMNode, from: number, to: number): string[] {
+  const out: string[] = [];
+  doc.nodesBetween(from, to, (node) => {
+    const name = node.type.name;
+    if (name === 'paragraph' || name === 'heading') {
+      out.push(node.textContent);
+      return false;
+    }
+    if (name === 'codeBlock') {
+      const txt = node.textContent;
+      if (txt) out.push(...txt.split('\n'));
+      else out.push('');
+      return false;
+    }
+    if (name === 'latexBlock' || name === 'mermaidBlock') {
+      const src = (node.attrs as { src?: string }).src ?? '';
+      out.push(src);
+      return false;
+    }
+    if (name === 'horizontalRule') {
+      return false;
+    }
+    return true;
+  });
+  return out;
 }

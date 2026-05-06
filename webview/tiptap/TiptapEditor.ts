@@ -8,6 +8,7 @@
  */
 import { Editor as TiptapCore } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
 import { LatexBlock } from './nodes/LatexBlock';
 import { MermaidBlock } from './nodes/MermaidBlock';
 import { buildMarkdownParser } from './markdown/parser';
@@ -61,7 +62,9 @@ export class TiptapEditor {
     this.bubbleMenu = createBubbleMenu();
     this.slashMenu = createSlashMenu({ trigger: options.slashTrigger || '/' });
     this.blockHandle = createBlockHandle();
-    this.contextMenu = createContextMenu({ getSerializer: () => this.serializer });
+    this.contextMenu = createContextMenu({
+      getSerializer: () => this.serializer,
+    });
     this.clipboardCopy = createClipboardCopy({
       initialFormat: options.defaultCopyFormat || 'markdown',
       getSerializer: () => this.serializer,
@@ -74,6 +77,7 @@ export class TiptapEditor {
         StarterKit.configure({
           // StarterKit 默认包含 history，覆盖撤销重做
         }),
+        Link.configure({ openOnClick: false, autolink: false }),
         LatexBlock,
         MermaidBlock,
         this.bubbleMenu.extension,

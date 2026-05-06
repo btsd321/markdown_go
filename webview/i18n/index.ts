@@ -39,6 +39,9 @@ const ZH: Dict = {
   'block.hr': '分割线',
   'block.latex': 'LaTeX 公式',
   'block.mermaid': 'Mermaid 图表',
+  'block.mergeUL': '合并为无序列表（单项）',
+  'block.mergeOL': '合并为有序列表（单项）',
+  'block.mergeCode': '合并为代码块',
 
   // BubbleMenu 内联按钮 title
   'inline.bold': '加粗',
@@ -51,10 +54,17 @@ const ZH: Dict = {
   'blockHandle.title': '点击插入新块',
 
   // ContextMenu
+  'context.cut': '剪切 Markdown',
+  'context.cutHint': '含格式',
   'context.copyPlain': '复制纯文本',
   'context.copyPlainHint': '仅可见文字',
   'context.copyMarkdown': '复制 Markdown',
   'context.copyMarkdownHint': '含格式、公式、图表源码',
+  'context.insert': '插入…',
+  'context.insertHint': '块 / 链接',
+  'context.back': '← 返回',
+  'context.insertLink': '链接',
+  'context.insertLinkHint': '[文本](url) 不换行',
 
   // PromptDialog
   'dialog.confirm': '插入',
@@ -64,6 +74,11 @@ const ZH: Dict = {
   'dialog.latex.placeholder': 'E = mc^2',
   'dialog.mermaid.title': '插入 Mermaid 图表',
   'dialog.mermaid.placeholder': 'graph LR\n  A --> B',
+  'dialog.link.title': '插入链接',
+  'dialog.link.urlLabel': '链接地址',
+  'dialog.link.urlPlaceholder': 'https://example.com',
+  'dialog.link.textLabel': '显示文本',
+  'dialog.link.textPlaceholder': '可选，默认为 URL',
 };
 
 const EN: Dict = {
@@ -88,6 +103,9 @@ const EN: Dict = {
   'block.hr': 'Divider',
   'block.latex': 'LaTeX Formula',
   'block.mermaid': 'Mermaid Diagram',
+  'block.mergeUL': 'Merge into Bullet List (single item)',
+  'block.mergeOL': 'Merge into Ordered List (single item)',
+  'block.mergeCode': 'Merge into Code Block',
 
   'inline.bold': 'Bold',
   'inline.italic': 'Italic',
@@ -97,10 +115,17 @@ const EN: Dict = {
 
   'blockHandle.title': 'Click to insert block',
 
+  'context.cut': 'Cut Markdown',
+  'context.cutHint': 'Includes formatting',
   'context.copyPlain': 'Copy Plain Text',
   'context.copyPlainHint': 'Visible text only',
   'context.copyMarkdown': 'Copy Markdown',
   'context.copyMarkdownHint': 'Incl. format, formulas, diagrams',
+  'context.insert': 'Insert…',
+  'context.insertHint': 'Block / Link',
+  'context.back': '← Back',
+  'context.insertLink': 'Link',
+  'context.insertLinkHint': '[text](url) inline',
 
   'dialog.confirm': 'Insert',
   'dialog.cancel': 'Cancel',
@@ -109,6 +134,11 @@ const EN: Dict = {
   'dialog.latex.placeholder': 'E = mc^2',
   'dialog.mermaid.title': 'Insert Mermaid Diagram',
   'dialog.mermaid.placeholder': 'graph LR\n  A --> B',
+  'dialog.link.title': 'Insert Link',
+  'dialog.link.urlLabel': 'URL',
+  'dialog.link.urlPlaceholder': 'https://example.com',
+  'dialog.link.textLabel': 'Display Text',
+  'dialog.link.textPlaceholder': 'Optional, defaults to URL',
 };
 
 const DICTS: Record<LanguageCode, Dict> = { 'zh-cn': ZH, en: EN };

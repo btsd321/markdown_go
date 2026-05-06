@@ -211,6 +211,20 @@ body {
 .modal-textarea:focus {
   border-color: var(--vscode-focusBorder);
 }
+.modal-input {
+  width: 100%;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: var(--vscode-font-family);
+  font-size: 0.95em;
+  outline: none;
+}
+.modal-input:focus {
+  border-color: var(--vscode-focusBorder);
+}
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -365,6 +379,11 @@ body {
 .bubble-type-item.is-active {
   background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
   color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.bubble-type-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
 }
 
 /* ========== SlashMenu（输入触发的浮动菜单） ========== */
