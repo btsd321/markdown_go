@@ -6,5 +6,6 @@
   "command.switchLanguage.title": "Switch Language",
   "config.language.description": "Editor UI language",
   "config.defaultMode.description": "Default display mode when opening a document",
-  "config.slashTrigger.description": "Character that triggers the slash menu"
+  "config.slashTrigger.description": "Character that triggers the slash menu",
+  "config.defaultCopyFormat.description": "Default copy format for Ctrl+C: markdown source or plain text"
 }

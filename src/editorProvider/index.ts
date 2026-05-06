@@ -8,6 +8,7 @@ import {
   LangChangePayload,
   DisplayMode,
   LanguageCode,
+  CopyFormat,
 } from '../../shared';
 import { logger } from '../log/logger';
 
@@ -148,6 +149,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     const language = (config.get<string>('language') || 'en') as LanguageCode;
     const defaultMode = (config.get<string>('defaultMode') || 'edit') as DisplayMode;
     const slashTrigger = config.get<string>('slashTrigger') || '/';
+    const defaultCopyFormat = (config.get<string>('defaultCopyFormat') || 'markdown') as CopyFormat;
     const keybindings =
       config.get<Record<string, string | string[]>>('keybindings') || {};
 
@@ -159,6 +161,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
         language,
         defaultMode,
         slashTrigger,
+        defaultCopyFormat,
         keybindings,
       },
     };

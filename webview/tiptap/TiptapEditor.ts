@@ -16,6 +16,8 @@ import { createBubbleMenu, BubbleMenuFactory } from './menus/BubbleMenu';
 import { createSlashMenu, SlashMenuController } from './menus/SlashMenu';
 import { createBlockHandle, BlockHandleController } from './menus/BlockHandle';
 import { createContextMenu, ContextMenuController } from './menus/ContextMenu';
+import { createClipboardCopy, ClipboardCopyController } from './menus/ClipboardCopy';
+import type { CopyFormat } from '../../shared';
 
 export interface TiptapEditorCallbacks {
   /** 文档变化（已序列化为 markdown） */
@@ -27,6 +29,8 @@ export interface TiptapEditorCallbacks {
 export interface TiptapEditorOptions {
   /** Slash 菜单触发字符，默认 "/" */
   slashTrigger?: string;
+  /** 默认复制格式，默认 'markdown' */
+  defaultCopyFormat?: CopyFormat;
 }
 
 const SYNC_DEBOUNCE_MS = 80;
@@ -39,6 +43,7 @@ export class TiptapEditor {
   private slashMenu: SlashMenuController;
   private blockHandle: BlockHandleController;
   private contextMenu: ContextMenuController;
+  private clipboardCopy: ClipboardCopyController;
 
   /** 上次主动写出的 markdown，用于回灌时识别 echo */
   private lastSentMarkdown: string | null = null;
@@ -55,6 +60,10 @@ export class TiptapEditor {
     this.slashMenu = createSlashMenu({ trigger: options.slashTrigger || '/' });
     this.blockHandle = createBlockHandle();
     this.contextMenu = createContextMenu({ getSerializer: () => this.serializer });
+    this.clipboardCopy = createClipboardCopy({
+      initialFormat: options.defaultCopyFormat || 'markdown',
+      getSerializer: () => this.serializer,
+    });
 
     this.editor = new TiptapCore({
       element: host,
@@ -68,6 +77,7 @@ export class TiptapEditor {
         this.slashMenu.extension,
         this.blockHandle.extension,
         this.contextMenu.extension,
+        this.clipboardCopy.extension,
       ],
       content: '',
       autofocus: false,
@@ -80,6 +90,7 @@ export class TiptapEditor {
     this.slashMenu.bind(this.editor);
     this.blockHandle.bind(this.editor);
     this.contextMenu.bind(this.editor);
+    this.clipboardCopy.bind(this.editor);
   }
 
   /** 用初始 markdown 启动 */
@@ -149,6 +160,11 @@ export class TiptapEditor {
   /** 动态修改 slash 触发字符（来自配置） */
   setSlashTrigger(trigger: string): void {
     this.slashMenu.setTrigger(trigger);
+  }
+
+  /** 动态修改默认复制格式 */
+  setCopyFormat(format: CopyFormat): void {
+    this.clipboardCopy.setFormat(format);
   }
 
   // -------- internal --------

@@ -73,6 +73,15 @@
           "default": "/",
           "description": "Character that triggers the slash menu"
         },
+        "markdownGo.defaultCopyFormat": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "plain"
+          ],
+          "default": "markdown",
+          "description": "%config.defaultCopyFormat.description%"
+        },
         "markdownGo.keybindings": {
           "type": "object",
           "default": {},

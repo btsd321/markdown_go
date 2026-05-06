@@ -6,5 +6,6 @@
   "command.switchLanguage.title": "切换语言",
   "config.language.description": "编辑器界面语言",
   "config.defaultMode.description": "打开文档时的默认显示模式",
-  "config.slashTrigger.description": "触发主下拉菜单的字符"
+  "config.slashTrigger.description": "触发主下拉菜单的字符",
+  "config.defaultCopyFormat.description": "Ctrl+C 默认复制格式：markdown 源码或纯文本"
 }

@@ -146,6 +146,9 @@ class App {
     if (payload.config?.slashTrigger) {
       this.editor.setSlashTrigger(payload.config.slashTrigger);
     }
+    if (payload.config?.defaultCopyFormat) {
+      this.editor.setCopyFormat(payload.config.defaultCopyFormat);
+    }
     this.editor.bootstrap(payload.content);
     this.plain.setMarkdown(payload.content);
     this.applyMode();

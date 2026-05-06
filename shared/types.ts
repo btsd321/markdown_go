@@ -47,6 +47,11 @@ export type DisplayMode = 'edit' | 'preview' | 'plain';
 export type LanguageCode = 'zh-cn' | 'en';
 
 /**
+ * 复制格式：markdown 源码 / 纯文本
+ */
+export type CopyFormat = 'markdown' | 'plain';
+
+/**
  * 文档编辑操作（webview → extension）
  */
 export interface DocumentEdit {
@@ -66,6 +71,8 @@ export interface ConfigSnapshot {
   language: LanguageCode;
   defaultMode: DisplayMode;
   slashTrigger: string;
+  /** 默认复制格式（Ctrl+C） */
+  defaultCopyFormat: CopyFormat;
   /** 用户自定义快捷键：commandId → chord 字符串或数组（空字符串/数组表示取消绑定） */
   keybindings?: Record<string, string | string[]>;
 }
