@@ -747,3 +747,20 @@ body {
   color: var(--vscode-descriptionForeground);
   font-size: 0.85em;
 }
+
+/* ========== Preview 只读模式 ========== */
+.tiptap-host.is-readonly .ProseMirror {
+  caret-color: transparent;
+}
+.tiptap-host.is-readonly .mg-block-handle,
+.tiptap-host.is-readonly .bubble-menu,
+.tiptap-host.is-readonly .slash-menu {
+  display: none !important;
+}
+/* 浮层菜单挂在 body 上，需要全局类来屏蔽 */
+body.mg-readonly .mg-block-handle,
+body.mg-readonly .mg-block-handle-menu,
+body.mg-readonly .bubble-menu,
+body.mg-readonly .slash-menu {
+  display: none !important;
+}

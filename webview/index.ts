@@ -127,9 +127,12 @@ class App {
 
   private applyMode(): void {
     const mode = this.currentMode;
-    this.editorHost.style.display = mode === 'edit' ? '' : 'none';
-    this.previewHost.style.display = mode === 'preview' ? '' : 'none';
-    this.previewHost.textContent = t('plain.placeholder');
+    // edit / preview 都展示 Tiptap 编辑器；preview 模式将编辑器置为只读
+    this.editorHost.style.display = mode === 'plain' ? 'none' : '';
+    this.previewHost.style.display = 'none';
+    this.editor.editor.setEditable(mode === 'edit');
+    this.editorHost.classList.toggle('is-readonly', mode === 'preview');
+    document.body.classList.toggle('mg-readonly', mode === 'preview');
     if (mode === 'plain') {
       this.plain.setMarkdown(this.currentMarkdown);
       this.plain.show();
