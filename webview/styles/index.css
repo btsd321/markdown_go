@@ -9,8 +9,6 @@ body {
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
   background-color: var(--vscode-editor-background);
-  padding: 0;
-  margin: 0;
 }
 
 #app {
@@ -25,37 +23,147 @@ body {
   padding: 20px;
 }
 
+/* ========== 顶部菜单栏 ========== */
 .menubar {
   display: flex;
-  gap: 20px;
-  padding: 10px;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--vscode-panel-border);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
+.menubar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.menubar select {
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border));
+  padding: 3px 6px;
+  border-radius: 2px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.menubar select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+/* ========== 内容区 ========== */
 .content {
-  padding: 10px;
+  padding: 0 8px;
 }
 
 .block {
+  position: relative;
   display: flex;
-  gap: 10px;
-  padding: 8px;
-  margin-bottom: 4px;
+  align-items: flex-start;
+  padding: 4px 0;
+  margin-bottom: 2px;
   border-left: 2px solid transparent;
+  padding-left: 36px;
 }
 
-.block:hover {
-  background-color: var(--vscode-list-hoverBackground);
+.block.is-active {
   border-left-color: var(--vscode-focusBorder);
 }
 
-.block-type {
+/* 行首按钮：默认隐藏，仅当前活动块显示 */
+.block-handle {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
   color: var(--vscode-descriptionForeground);
-  font-size: 0.9em;
-  min-width: 80px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 16px;
+  line-height: 1;
+  user-select: none;
+}
+
+.block.is-active .block-handle {
+  display: inline-flex;
+}
+
+.block-handle:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+  color: var(--vscode-foreground);
 }
 
 .block-content {
   flex: 1;
+  min-height: 1.4em;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* 不同块类型样式 */
+.block[data-type='heading-1'] .block-content {
+  font-size: 1.8em;
+  font-weight: 600;
+}
+.block[data-type='heading-2'] .block-content {
+  font-size: 1.5em;
+  font-weight: 600;
+}
+.block[data-type='heading-3'] .block-content {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+.block[data-type='latex'] .block-content,
+.block[data-type='mermaid'] .block-content {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
+  padding: 8px 10px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+/* ========== 弹出菜单 ========== */
+.popup-menu {
+  position: absolute;
+  z-index: 1000;
+  min-width: 200px;
+  background: var(--vscode-menu-background, var(--vscode-editor-background));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+}
+
+.popup-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.popup-menu-item:hover {
+  background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+
+.popup-menu-sep {
+  height: 1px;
+  background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+  margin: 4px 0;
 }

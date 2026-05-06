@@ -1,51 +1,93 @@
-import { MessageType, InitPayload, DocSyncPayload, DisplayMode } from '../shared';
+/**
+ * Webview 启动入口
+ *
+ * 仅负责装配：构造 model / editor / menubar，连接 bridge 消息。
+ * 业务逻辑分散在 editor/ 和 ui/ 子模块中。
+ */
+import {
+  MessageType,
+  InitPayload,
+  DocSyncPayload,
+  DisplayMode,
+  LanguageCode,
+} from '../shared';
 import { bridge } from './core/bridge';
 import { DocumentModel } from './model/DocumentModel';
 import { registerBuiltinCommands } from './commands/index';
+import { Editor } from './editor/Editor';
+import { renderMenubar } from './ui/Menubar';
 
 class App {
   private model = new DocumentModel();
+  private editor!: Editor;
   private currentMode: DisplayMode = 'edit';
-  private currentLanguage = 'zh-cn';
+  private currentLanguage: LanguageCode = 'zh-cn';
+  private menubarHost!: HTMLElement;
   private initialized = false;
 
-  async init() {
+  init(): void {
     if (this.initialized) return;
     this.initialized = true;
 
-    // 注册内置命令
     registerBuiltinCommands(this.model);
 
-    // 监听 Extension 消息
-    bridge.on<InitPayload>(MessageType.INIT, (payload) => {
-      this.handleInit(payload);
-    });
+    this.buildLayout();
 
-    bridge.on<DocSyncPayload>(MessageType.DOC_SYNC, (payload) => {
-      this.handleDocSync(payload);
-    });
+    bridge.on<InitPayload>(MessageType.INIT, (p) => this.handleInit(p));
+    bridge.on<DocSyncPayload>(MessageType.DOC_SYNC, (p) => this.handleDocSync(p));
 
-    // 监听模型变更，同步到 Extension
-    this.model.onChange(() => {
-      this.syncToExtension();
-    });
-
-    // 通知 Extension 准备就绪
     bridge.send(MessageType.READY, { version: '0.0.1' });
-
     bridge.log('info', 'Webview initialized');
   }
 
-  private handleInit(payload: InitPayload) {
+  private buildLayout(): void {
+    const app = document.getElementById('app');
+    if (!app) throw new Error('#app not found');
+    app.innerHTML = '';
+
+    const editorRoot = document.createElement('div');
+    editorRoot.className = 'editor';
+
+    this.menubarHost = document.createElement('div');
+    editorRoot.appendChild(this.menubarHost);
+
+    const content = document.createElement('div');
+    content.className = 'content';
+    editorRoot.appendChild(content);
+
+    app.appendChild(editorRoot);
+
+    this.renderMenubar();
+
+    this.editor = new Editor(content, this.model, {
+      onSync: (markdown) => this.syncToExtension(markdown),
+      log: (msg, data) => bridge.log('info', msg, data),
+    });
+  }
+
+  private renderMenubar(): void {
+    this.menubarHost.innerHTML = '';
+    this.menubarHost.appendChild(
+      renderMenubar({
+        mode: this.currentMode,
+        language: this.currentLanguage,
+        onModeChange: (m) => {
+          this.currentMode = m;
+          bridge.send(MessageType.MODE_CHANGE, { mode: m });
+        },
+        onLanguageChange: (l) => {
+          this.currentLanguage = l;
+          bridge.send(MessageType.LANG_CHANGE, { language: l });
+        },
+      })
+    );
+  }
+
+  private handleInit(payload: InitPayload): void {
     this.currentMode = payload.mode;
     this.currentLanguage = payload.language;
-
-    // 解析文档
-    this.model.fromMarkdown(payload.content);
-
-    // 渲染 UI
-    this.render();
-
+    this.renderMenubar();
+    this.editor.bootstrap(payload.content);
     bridge.log('info', 'Document initialized', {
       mode: this.currentMode,
       language: this.currentLanguage,
@@ -53,16 +95,11 @@ class App {
     });
   }
 
-  private handleDocSync(payload: DocSyncPayload) {
-    // 外部修改，重新解析
-    this.model.fromMarkdown(payload.content);
-    this.render();
-
-    bridge.log('info', 'Document synced from external source');
+  private handleDocSync(payload: DocSyncPayload): void {
+    this.editor.setMarkdown(payload.content);
   }
 
-  private syncToExtension() {
-    const markdown = this.model.toMarkdown();
+  private syncToExtension(markdown: string): void {
     bridge.send(MessageType.DOC_CHANGE, {
       edits: [
         {
@@ -73,44 +110,6 @@ class App {
       baseVersion: 0,
     });
   }
-
-  private render() {
-    const app = document.getElementById('app');
-    if (!app) return;
-
-    // 临时简单渲染
-    const blocks = this.model.getAllBlocks();
-    app.innerHTML = `
-      <div class="editor">
-        <div class="menubar">
-          <span>Mode: ${this.currentMode}</span>
-          <span>Language: ${this.currentLanguage}</span>
-        </div>
-        <div class="content">
-          ${blocks
-            .map(
-              (block) => `
-            <div class="block" data-id="${block.id}" data-type="${block.type}">
-              <span class="block-type">[${block.type}]</span>
-              <span class="block-content">${this.escapeHtml(block.content)}</span>
-            </div>
-          `
-            )
-            .join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }
 
-// 启动应用
-const app = new App();
-app.init().catch((err) => {
-  bridge.error('Failed to initialize app', err);
-});
+new App().init();
