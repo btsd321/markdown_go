@@ -16,6 +16,8 @@ export const DEFAULT_INSERT_MENU: InsertMenuItem[] = [
   { label: '二级标题  H2', type: 'heading-2' },
   { label: '三级标题  H3', type: 'heading-3' },
   { label: '正文段落', type: 'paragraph' },
+  { label: '无序列表  • ', type: 'list-unordered' },
+  { label: '有序列表  1.', type: 'list-ordered' },
   { label: 'LaTeX 公式', type: 'latex', initial: 'E = mc^2' },
   { label: 'Mermaid 流程图', type: 'mermaid', initial: 'graph LR\n  A --> B' },
 ];

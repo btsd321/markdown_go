@@ -54,6 +54,8 @@ export type BlockType =
   | 'heading-1'
   | 'heading-2'
   | 'heading-3'
+  | 'list-unordered'
+  | 'list-ordered'
   | 'latex'
   | 'mermaid';
 

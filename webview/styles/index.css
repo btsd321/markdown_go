@@ -125,6 +125,27 @@ body {
   font-size: 1.25em;
   font-weight: 600;
 }
+
+/* 列表块：在内容前显示 data-marker（"•" 或 "1."） */
+.block[data-type='list-unordered'],
+.block[data-type='list-ordered'] {
+  align-items: flex-start;
+}
+.block[data-type='list-unordered'] .block-content,
+.block[data-type='list-ordered'] .block-content {
+  position: relative;
+  padding-left: 1.6em;
+}
+.block[data-type='list-unordered'] .block-content::before,
+.block[data-type='list-ordered'] .block-content::before {
+  content: attr(data-marker);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.4em;
+  color: var(--vscode-descriptionForeground);
+  user-select: none;
+}
 .block[data-type='latex'] .block-content,
 .block[data-type='mermaid'] .block-content {
   font-family: var(--vscode-editor-font-family, monospace);

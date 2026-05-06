@@ -15,6 +15,10 @@ function handleLabelOf(type: Block['type']): string {
       return 'H2';
     case 'heading-3':
       return 'H3';
+    case 'list-unordered':
+      return '•';
+    case 'list-ordered':
+      return '1.';
     case 'latex':
       return 'fx';
     case 'mermaid':

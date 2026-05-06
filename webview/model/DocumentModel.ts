@@ -92,6 +92,28 @@ export class DocumentModel {
         continue;
       }
 
+      // 无序列表：“- xxx” / “* xxx” / “+ xxx”（允许前导空格）
+      const ulMatch = line.match(/^(\s*)([-*+])\s+(.*)$/);
+      if (ulMatch) {
+        newBlocks.push({
+          id: this.generateId(),
+          type: 'list-unordered',
+          content: ulMatch[3],
+        });
+        continue;
+      }
+
+      // 有序列表：“1. xxx” 原始序号忽略，序列化时重编
+      const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+      if (olMatch) {
+        newBlocks.push({
+          id: this.generateId(),
+          type: 'list-ordered',
+          content: olMatch[3],
+        });
+        continue;
+      }
+
       // 普通行（包括空行）都作为一个独立的 paragraph 块，
       // 这样源文件中的空行/缩进能被原样保留。
       newBlocks.push({
@@ -118,8 +140,12 @@ export class DocumentModel {
    */
   toMarkdown(): string {
     const lines: string[] = [];
+    let olCounter = 0; // 连续有序列表项的序号；遇到非 list-ordered 即重置
 
     for (const block of this.blocks) {
+      if (block.type === 'list-ordered') olCounter += 1;
+      else olCounter = 0;
+
       switch (block.type) {
         case 'heading-1':
           lines.push(`# ${block.content}`);
@@ -129,6 +155,12 @@ export class DocumentModel {
           break;
         case 'heading-3':
           lines.push(`### ${block.content}`);
+          break;
+        case 'list-unordered':
+          lines.push(`- ${block.content}`);
+          break;
+        case 'list-ordered':
+          lines.push(`${olCounter}. ${block.content}`);
           break;
         case 'latex':
           // 主流（Pandoc / KaTeX / mdmath）写法：$$ ... $$ 围栏

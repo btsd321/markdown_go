@@ -106,6 +106,7 @@ export class Editor {
     this.previewEls.clear();
 
     const blocks = this.model.getAllBlocks();
+    let olCounter = 0;
     for (const b of blocks) {
       const { root, content, preview } = renderBlock(b, {
         onFocus: (id) => this.setActive(id),
@@ -114,6 +115,20 @@ export class Editor {
         onEnterEditing: (id) => this.enterEditing(id),
         attachContentListeners: (id, el) => this.attachBlockListeners(id, el),
       });
+
+      // 列表标记：无序 “•”、有序 “N.”，N 随连续同类块递增
+      if (b.type === 'list-ordered') {
+        olCounter += 1;
+        root.dataset.marker = `${olCounter}.`;
+        content.dataset.marker = `${olCounter}.`;
+      } else {
+        olCounter = 0;
+        if (b.type === 'list-unordered') {
+          root.dataset.marker = '•';
+          content.dataset.marker = '•';
+        }
+      }
+
       this.blockEls.set(b.id, root);
       this.contentEls.set(b.id, content);
       if (preview) this.previewEls.set(b.id, preview);
@@ -315,6 +330,28 @@ export class Editor {
       return;
     }
     this.flushPendingSnapshot();
+
+    // 列表块的回车：
+    //   - 当前项为空 → 转为 paragraph，结束列表
+    //   - 否则 → 在下方插入同类型新列表项
+    if (block && (block.type === 'list-unordered' || block.type === 'list-ordered')) {
+      if (block.content.length === 0) {
+        this.silentUpdate(blockId, { type: 'paragraph' });
+        this.render();
+        this.focusBlock(blockId, 0);
+        this.history.push(this.captureSnapshot());
+        this.scheduleSync();
+        return;
+      }
+      const sibling: Block = { id: '', type: block.type, content: '' };
+      this.model.insertBlock(blockId, sibling);
+      this.render();
+      this.focusBlock(sibling.id, 0);
+      this.history.push(this.captureSnapshot());
+      this.scheduleSync();
+      return;
+    }
+
     const newBlock: Block = { id: '', type: 'paragraph', content: '' };
     this.model.insertBlock(blockId, newBlock);
     this.cb.log?.('[Editor.enterAfter] insertedAfter', {
@@ -404,6 +441,16 @@ export class Editor {
 
     const current = blocks[idx];
     this.flushPendingSnapshot();
+
+    // 列表项行首 Backspace：转为 paragraph 而非合并到上一块
+    if (current.type === 'list-unordered' || current.type === 'list-ordered') {
+      this.silentUpdate(blockId, { type: 'paragraph' });
+      this.render();
+      this.focusBlock(blockId, 0);
+      this.history.push(this.captureSnapshot());
+      this.scheduleSync();
+      return;
+    }
 
     // 第一个块：什么也不做（避免误删）
     if (idx === 0) {
