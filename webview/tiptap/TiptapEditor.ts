@@ -121,11 +121,15 @@ export class TiptapEditor {
   /** 用初始 markdown 启动 */
   bootstrap(markdown: string): void {
     this.setMarkdown(markdown);
-    // === DEBUG：bootstrap 后立刻做一次 round-trip 对比 ===
+    // 把 lastSentMarkdown 锁定为「往返后的稳态字符串」。
+    // 这样初始化后即便某个插件触发一次 transaction → onUpdate → scheduleSync，
+    // 序列化结果会与 lastSentMarkdown 相同 → 跳过回写，
+    // 避免「打开文件就被标 dirty / 被规范化覆盖」。
     const out = this.getMarkdown();
+    this.lastSentMarkdown = out;
     const normalized = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     if (out !== normalized) {
-      this.cb.log?.('[TiptapEditor.bootstrap] roundtrip MISMATCH', {
+      this.cb.log?.('[TiptapEditor.bootstrap] roundtrip MISMATCH (lock to roundtrip output, no write-back)', {
         inLen: normalized.length,
         outLen: out.length,
         diff: diffPreview(normalized, out),
