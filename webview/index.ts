@@ -15,6 +15,7 @@ import { TiptapEditor } from './tiptap/TiptapEditor';
 import { renderMenubar } from './ui/Menubar';
 import { PlainView } from './ui/PlainView';
 import { setLocale, onLocaleChange, t } from './i18n';
+import { setImageBaseUri, setImageDocumentDir } from './runtime/imageBase';
 
 class App {
   private editor!: TiptapEditor;
@@ -141,6 +142,8 @@ class App {
     this.currentMode = payload.mode;
     this.currentLanguage = payload.language;
     this.currentMarkdown = payload.content;
+    setImageBaseUri(payload.baseUri);
+    setImageDocumentDir(payload.documentDir);
     setLocale(this.currentLanguage);
     this.renderMenubar();
     if (payload.config?.slashTrigger) {

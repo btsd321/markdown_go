@@ -20,6 +20,10 @@ graph LR
   B --> C[结束]
 ```
 
+## 图片测试
+
+![测试图片](../assets/imgs/markdown%20go.png)
+
 ## 列表测试
 
 ### 无序列表

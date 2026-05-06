@@ -20,6 +20,12 @@ export enum MessageType {
   COMMAND_EXECUTE = 'command.execute',
   COMMAND_RESULT = 'command.result',
 
+  // 图片
+  IMAGE_PICK = 'image.pick',
+
+  // 视频
+  VIDEO_PICK = 'video.pick',
+
   // 日志与错误
   LOG = 'log',
   ERROR = 'error',
@@ -88,6 +94,10 @@ export interface InitPayload {
   language: LanguageCode;
   mode: DisplayMode;
   config: ConfigSnapshot;
+  /** 文档所在目录的 webview URI（带尾斜杠），用于解析相对路径图片 */
+  baseUri?: string;
+  /** 文档所在目录的绝对路径（供计算相对路径） */
+  documentDir?: string;
 }
 
 export interface DocSyncPayload {
@@ -130,3 +140,28 @@ export interface ErrorPayload {
   message: string;
   stack?: string;
 }
+
+// ============ 图片 ============
+
+export interface ImagePickRequest {
+  /** 预期的接受后缀（可选） */
+  extensions?: string[];
+}
+
+export interface ImagePickResponse {
+  /** 用户取消 → null */
+  absolutePath: string | null;
+  /** 相对于文档的路径（POSIX 风格）；无法计算时 = absolutePath */
+  relativePath: string | null;
+  /** webview 可访问的 URI，用于立即预览 */
+  webviewUri: string | null;
+}
+
+// ============ 视频 ============
+
+export interface VideoPickRequest {
+  extensions?: string[];
+}
+
+/** 视频 picker 返回结构与图片一致 */
+export type VideoPickResponse = ImagePickResponse;

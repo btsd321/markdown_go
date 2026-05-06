@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {
   MessageType,
   InitPayload,
@@ -9,6 +10,7 @@ import {
   DisplayMode,
   LanguageCode,
   CopyFormat,
+  ImagePickResponse,
 } from '../../shared';
 import { logger } from '../log/logger';
 
@@ -37,12 +39,57 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     _token: vscode.CancellationToken
   ): Promise<void> {
     // 配置 Webview
-    webviewPanel.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [
-        vscode.Uri.joinPath(this.context.extensionUri, 'media'),
-        vscode.Uri.joinPath(this.context.extensionUri, 'assets'),
-      ],
+    const docDir = path.dirname(document.uri.fsPath);
+    const docDirUri = vscode.Uri.file(docDir);
+    /** 动态 localResourceRoots：以 fsPath 为 key 去重 */
+    const resourceRoots = new Map<string, vscode.Uri>();
+    const ensureRoot = (uri: vscode.Uri) => {
+      const key = uri.fsPath.toLowerCase();
+      if (resourceRoots.has(key)) return false;
+      resourceRoots.set(key, uri);
+      return true;
+    };
+    for (const u of this.computeLocalResourceRoots(document, docDir)) ensureRoot(u);
+    const applyResourceRoots = () => {
+      webviewPanel.webview.options = {
+        enableScripts: true,
+        localResourceRoots: Array.from(resourceRoots.values()),
+      };
+    };
+    applyResourceRoots();
+    logger.info(
+      `[Provider.localResourceRoots] ${Array.from(resourceRoots.values()).map((u) => u.fsPath).join(' | ')}`,
+    );
+
+    /** 扫描 markdown 中的 ![](abs) / <video src=abs> / <source src=abs> / <iframe src=abs>，
+     *  把绝对路径资源的所在目录加入 localResourceRoots */
+    const scanAndExpandRoots = (text: string) => {
+      let changed = false;
+      const candidates: string[] = [];
+      // 1) ![](src)
+      const reImg = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
+      let m: RegExpExecArray | null;
+      while ((m = reImg.exec(text)) !== null) candidates.push(m[1]);
+      // 2) <video src="...">  /  <source src="...">  /  <iframe src="...">
+      const reTag = /<(?:video|source|iframe)\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi;
+      while ((m = reTag.exec(text)) !== null) candidates.push(m[1]);
+      for (const src of candidates) {
+        let absPath: string | null = null;
+        if (/^[a-zA-Z]:[\\/]/.test(src)) absPath = src; // Windows 绝对
+        else if (src.startsWith('/')) absPath = src; // POSIX 绝对
+        else if (/^file:\/\//i.test(src)) {
+          try { absPath = vscode.Uri.parse(src).fsPath; } catch { /* ignore */ }
+        }
+        if (!absPath) continue;
+        try {
+          const dir = vscode.Uri.file(path.dirname(absPath));
+          if (ensureRoot(dir)) {
+            changed = true;
+            logger.info(`[Provider.scan] add localResourceRoot ${dir.fsPath}`);
+          }
+        } catch { /* ignore */ }
+      }
+      if (changed) applyResourceRoots();
     };
 
     webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
@@ -55,6 +102,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
         switch (message.type) {
           case MessageType.READY:
             // Webview 准备就绪，发送初始化数据
+            scanAndExpandRoots(document.getText());
             await this.sendInit(webviewPanel.webview, document);
             break;
 
@@ -95,9 +143,75 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
           case MessageType.ERROR:
             logger.error(`[Webview] ${message.payload.message}${message.payload.stack ? `\n${message.payload.stack}` : ''}`);
             break;
+
+          case MessageType.IMAGE_PICK: {
+            await handlePick(message.id, MessageType.IMAGE_PICK, {
+              Images: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'],
+            });
+            break;
+          }
+
+          case MessageType.VIDEO_PICK: {
+            await handlePick(message.id, MessageType.VIDEO_PICK, {
+              Videos: ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'mkv'],
+            });
+            break;
+          }
         }
       }
     );
+
+    /** 通用 picker 处理：返回 webviewUri / 相对路径，动态添加所在目录 */
+    async function handlePick(
+      reqId: string | undefined,
+      replyType: MessageType,
+      filters: Record<string, string[]>,
+    ): Promise<void> {
+      try {
+        const picked = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          canSelectFiles: true,
+          canSelectFolders: false,
+          openLabel: 'Insert',
+          filters,
+          defaultUri: docDirUri,
+        });
+        const file = picked && picked[0];
+        if (file) {
+          const pickedDir = vscode.Uri.file(path.dirname(file.fsPath));
+          if (ensureRoot(pickedDir)) {
+            applyResourceRoots();
+            logger.info(`[Provider.${replyType}] add localResourceRoot ${pickedDir.fsPath}`);
+          }
+        }
+        const response: ImagePickResponse = file
+          ? {
+              absolutePath: file.fsPath,
+              relativePath: toPosixRelative(path.dirname(document.uri.fsPath), file.fsPath),
+              webviewUri: webviewPanel.webview.asWebviewUri(file).toString(),
+            }
+          : { absolutePath: null, relativePath: null, webviewUri: null };
+        logger.info(
+          `[Provider.${replyType}] file=${file?.fsPath ?? '(none)'} rel=${response.relativePath ?? ''} webviewUri=${response.webviewUri ?? ''}`,
+        );
+        webviewPanel.webview.postMessage({
+          id: reqId,
+          type: replyType,
+          source: 'extension',
+          payload: response,
+          timestamp: Date.now(),
+        });
+      } catch (err: any) {
+        logger.error(`[Provider.${replyType}] ${err?.message || err}`);
+        webviewPanel.webview.postMessage({
+          id: reqId,
+          type: replyType,
+          source: 'extension',
+          payload: { absolutePath: null, relativePath: null, webviewUri: null },
+          timestamp: Date.now(),
+        });
+      }
+    }
 
     // 监听文档变更（外部编辑）
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
@@ -106,6 +220,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
           // 同步到 Webview
           documentVersion++;
           const text = document.getText();
+          scanAndExpandRoots(text);
           logger.info(
             `[Provider.onDidChange->DOC_SYNC] len=${text.length} preview=${JSON.stringify(text.slice(0, 120))}`
           );
@@ -164,6 +279,8 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
         defaultCopyFormat,
         keybindings,
       },
+      baseUri: this.computeBaseUri(webview, document),
+      documentDir: this.computeDocumentDir(document),
     };
 
     webview.postMessage({
@@ -209,6 +326,63 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     await vscode.workspace.applyEdit(workspaceEdit);
   }
 
+  /**
+   * 计算 webview 可访问的本地资源根：
+   *   - 扩展 media / assets
+   *   - 当前文档目录
+   *   - 当前打开的所有 workspace folders
+   *   - 文档所在磁盘根（Windows 为驱动器根，POSIX 为 `/`），方便引用文档目录之外的图片
+   */
+  private computeLocalResourceRoots(
+    _document: vscode.TextDocument,
+    docDir: string,
+  ): vscode.Uri[] {
+    const roots: vscode.Uri[] = [
+      vscode.Uri.joinPath(this.context.extensionUri, 'media'),
+      vscode.Uri.joinPath(this.context.extensionUri, 'assets'),
+    ];
+    const seen = new Set<string>(roots.map((u) => u.toString()));
+    const push = (uri: vscode.Uri) => {
+      const key = uri.toString();
+      if (seen.has(key)) return;
+      seen.add(key);
+      roots.push(uri);
+    };
+    try {
+      push(vscode.Uri.file(docDir));
+      const root = path.parse(docDir).root; // Windows: 'c:\\'  POSIX: '/'
+      if (root) push(vscode.Uri.file(root));
+    } catch {
+      /* ignore */
+    }
+    if (vscode.workspace.workspaceFolders) {
+      for (const wf of vscode.workspace.workspaceFolders) push(wf.uri);
+    }
+    return roots;
+  }
+
+  private computeBaseUri(
+    webview: vscode.Webview,
+    document: vscode.TextDocument,
+  ): string | undefined {
+    try {
+      const dir = path.dirname(document.uri.fsPath);
+      if (!dir) return undefined;
+      const u = webview.asWebviewUri(vscode.Uri.file(dir)).toString();
+      return u.endsWith('/') ? u : `${u}/`;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private computeDocumentDir(document: vscode.TextDocument): string | undefined {
+    try {
+      return path.dirname(document.uri.fsPath);
+    } catch {
+      return undefined;
+    }
+  }
+
   private getHtmlForWebview(webview: vscode.Webview): string {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'webview.js')
@@ -227,7 +401,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https: data:; font-src ${webview.cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https: http: data:; media-src ${webview.cspSource} https: http: data: blob:; frame-src https: http:; font-src ${webview.cspSource};">
   <link href="${katexCssUri}" rel="stylesheet">
   <link href="${styleUri}" rel="stylesheet">
   <title>Markdown Go Editor</title>
@@ -246,5 +420,20 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
       text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
+  }
+}
+
+/** 把 abs 转为相对 base 的 POSIX 风格路径；不在子目录则返回绝对路径 */
+function toPosixRelative(baseDir: string, abs: string): string {
+  try {
+    let rel = path.relative(baseDir, abs);
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+      // 不在文档目录下 → 用绝对路径，便于显示，但用 file:/// 形式更通用
+      return abs.replace(/\\/g, '/');
+    }
+    rel = rel.replace(/\\/g, '/');
+    return rel;
+  } catch {
+    return abs.replace(/\\/g, '/');
   }
 }

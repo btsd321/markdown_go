@@ -13,9 +13,27 @@ import type { Schema } from '@tiptap/pm/model';
 export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
   const def = defaultMarkdownSerializer;
 
+  /** \u5982\u679c\u8282\u70b9\u542b\u975e\u9ed8\u8ba4 textAlign\uff0c\u5219\u7528 `<div align="X">...</div>` \u5305\u88f9\u8f93\u51fa */
+  const wrapAlign = (state: any, node: any, render: () => void) => {
+    const align = node.attrs?.textAlign;
+    if (!align || align === 'left') {
+      render();
+      return;
+    }
+    state.write(`<div align="${align}">`);
+    state.closeBlock(node);
+    render();
+    state.write('</div>');
+    state.closeBlock(node);
+  };
+
   const nodes: Record<string, any> = {
-    paragraph: def.nodes.paragraph,
-    heading: def.nodes.heading,
+    paragraph: (state: any, node: any, parent: any, index: number) => {
+      wrapAlign(state, node, () => def.nodes.paragraph(state, node, parent, index));
+    },
+    heading: (state: any, node: any, parent: any, index: number) => {
+      wrapAlign(state, node, () => def.nodes.heading(state, node, parent, index));
+    },
     blockquote: def.nodes.blockquote,
     horizontal_rule: def.nodes.horizontal_rule,
     hard_break: def.nodes.hard_break,
@@ -76,6 +94,39 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
       state.ensureNewLine();
       state.write('```');
       state.closeBlock(node);
+    };
+  }
+
+  if (schema.nodes.videoBlock) {
+    nodes.videoBlock = (state: any, node: any) => {
+      const src = String(node.attrs.src || '');
+      const kind = node.attrs.kind === 'iframe' ? 'iframe' : 'video';
+      const title = node.attrs.title ? ` title="${String(node.attrs.title).replace(/"/g, '&quot;')}"` : '';
+      const width = node.attrs.width ? ` width="${node.attrs.width}"` : '';
+      const height = node.attrs.height ? ` height="${node.attrs.height}"` : '';
+      const safeSrc = src.replace(/"/g, '&quot;');
+      if (kind === 'iframe') {
+        state.write(`<iframe src="${safeSrc}"${title}${width}${height} frameborder="0" allowfullscreen></iframe>`);
+      } else {
+        state.write(`<video src="${safeSrc}"${title}${width}${height} controls></video>`);
+      }
+      state.closeBlock(node);
+    };
+  }
+
+  if (schema.nodes.image) {
+    nodes.image = (state: any, node: any) => {
+      const src = node.attrs.src || '';
+      const alt = node.attrs.alt || '';
+      const title = node.attrs.title || '';
+      const escAlt = String(alt).replace(/[\[\]]/g, (m: string) => '\\' + m);
+      const escSrc = String(src).replace(/[\(\)\s]/g, (m: string) =>
+        m === ' ' ? '%20' : '\\' + m,
+      );
+      let out = `![${escAlt}](${escSrc}`;
+      if (title) out += ` "${String(title).replace(/"/g, '\\"')}"`;
+      out += ')';
+      state.write(out);
     };
   }
 

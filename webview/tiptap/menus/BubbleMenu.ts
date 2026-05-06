@@ -18,6 +18,41 @@ import type { Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { t, onLocaleChange } from '../../i18n';
 
+/** 对齐图标（svg 字符串）—— 与编辑栏其它按钮等高（14px） */
+const ALIGN_ICONS: Record<'left' | 'center' | 'right', string> = {
+  left:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+    '<rect x="2" y="3" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="2" y="6.4" width="8" height="1.6" rx="0.3"/>' +
+    '<rect x="2" y="9.8" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="2" y="13.2" width="8" height="1.6" rx="0.3"/>' +
+    '</svg>',
+  center:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+    '<rect x="2" y="3" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="4" y="6.4" width="8" height="1.6" rx="0.3"/>' +
+    '<rect x="2" y="9.8" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="4" y="13.2" width="8" height="1.6" rx="0.3"/>' +
+    '</svg>',
+  right:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+    '<rect x="2" y="3" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="6" y="6.4" width="8" height="1.6" rx="0.3"/>' +
+    '<rect x="2" y="9.8" width="12" height="1.6" rx="0.3"/>' +
+    '<rect x="6" y="13.2" width="8" height="1.6" rx="0.3"/>' +
+    '</svg>',
+};
+
+interface AlignItem {
+  key: 'left' | 'center' | 'right';
+  getLabel(): string;
+}
+const ALIGNS: AlignItem[] = [
+  { key: 'left', getLabel: () => t('bubble.alignLeft') },
+  { key: 'center', getLabel: () => t('bubble.alignCenter') },
+  { key: 'right', getLabel: () => t('bubble.alignRight') },
+];
+
 interface BlockTypeItem {
   key: string;
   getLabel(): string;
@@ -167,6 +202,21 @@ export function createBubbleMenu(): BubbleMenuFactory {
   const inlineWrap = document.createElement('div');
   inlineWrap.className = 'bubble-group bubble-group-inline';
 
+  // 对齐组：当前对齐图标 + 下拉菜单（左/居中/右）
+  const alignWrap = document.createElement('div');
+  alignWrap.className = 'bubble-group bubble-group-align';
+  const alignBtn = document.createElement('button');
+  alignBtn.type = 'button';
+  alignBtn.className = 'bubble-btn bubble-align-btn';
+  alignBtn.title = t('bubble.alignTitle');
+  alignBtn.innerHTML =
+    `<span class="bubble-align-icon" data-align="left">${ALIGN_ICONS.left}</span>` +
+    `<span class="bubble-caret">▾</span>`;
+  const alignMenu = document.createElement('div');
+  alignMenu.className = 'bubble-align-menu';
+  alignMenu.style.display = 'none';
+  alignWrap.append(alignBtn, alignMenu);
+
   // 颜色组：调色按钮 + 弹出色板
   const colorWrap = document.createElement('div');
   colorWrap.className = 'bubble-group bubble-group-color';
@@ -183,7 +233,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
   colorPanel.style.display = 'none';
   colorWrap.append(colorBtn, colorPanel);
 
-  element.append(typeWrap, inlineWrap, colorWrap);
+  element.append(typeWrap, alignWrap, inlineWrap, colorWrap);
   document.body.appendChild(element);
 
   const typeItemEls: { item: BlockTypeItem; el: HTMLElement }[] = [];
@@ -192,6 +242,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
   let editorRef: Editor | null = null;
   let visible = false;
   let typeMenuOpen = false;
+  let alignMenuOpen = false;
 
   const closeTypeMenu = () => {
     typeMenuOpen = false;
@@ -209,6 +260,55 @@ export function createBubbleMenu(): BubbleMenuFactory {
     if (typeMenuOpen) closeTypeMenu();
     else openTypeMenu();
   });
+
+  // ===== 对齐下拉 =====
+  const closeAlignMenu = () => {
+    alignMenuOpen = false;
+    alignMenu.style.display = 'none';
+  };
+  function buildAlignMenu() {
+    alignMenu.innerHTML = '';
+    for (const it of ALIGNS) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'bubble-align-item';
+      el.dataset.align = it.key;
+      el.innerHTML =
+        `<span class="bubble-align-icon">${ALIGN_ICONS[it.key]}</span>` +
+        `<span class="bubble-align-label">${it.getLabel()}</span>`;
+      const cur = currentAlign();
+      if (cur === it.key) el.classList.add('is-active');
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!editorRef) return;
+        editorRef.chain().focus().setTextAlign(it.key).run();
+        closeAlignMenu();
+        refreshActive();
+      });
+      alignMenu.appendChild(el);
+    }
+  }
+  alignBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (alignMenuOpen) {
+      closeAlignMenu();
+      return;
+    }
+    closeTypeMenu();
+    closeColorPanel();
+    buildAlignMenu();
+    alignMenuOpen = true;
+    alignMenu.style.display = '';
+  });
+
+  function currentAlign(): 'left' | 'center' | 'right' {
+    if (!editorRef) return 'left';
+    if (editorRef.isActive({ textAlign: 'center' })) return 'center';
+    if (editorRef.isActive({ textAlign: 'right' })) return 'right';
+    return 'left';
+  }
 
   // ===== 颜色面板 =====
   const COLOR_SWATCHES: { name: string; value: string | null }[] = [
@@ -290,6 +390,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
       return;
     }
     closeTypeMenu();
+    closeAlignMenu();
     buildColorPanel();
     colorPanelOpen = true;
     colorPanel.style.display = '';
@@ -355,6 +456,13 @@ export function createBubbleMenu(): BubbleMenuFactory {
     const cur = editorRef.getAttributes('textStyle')?.color;
     const bar = colorBtn.querySelector('.bubble-color-bar') as HTMLElement | null;
     if (bar) bar.style.background = cur || 'transparent';
+    // 同步对齐图标
+    const ai = currentAlign();
+    const aIcon = alignBtn.querySelector('.bubble-align-icon') as HTMLElement | null;
+    if (aIcon) {
+      aIcon.dataset.align = ai;
+      aIcon.innerHTML = ALIGN_ICONS[ai];
+    }
   }
 
   /**
@@ -419,6 +527,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
     if (!visible) return;
     visible = false;
     closeTypeMenu();
+    closeAlignMenu();
     closeColorPanel();
     element.style.display = 'none';
   }

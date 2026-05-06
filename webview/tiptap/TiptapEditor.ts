@@ -11,8 +11,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import TextAlign from '@tiptap/extension-text-align';
 import { LatexBlock } from './nodes/LatexBlock';
 import { MermaidBlock } from './nodes/MermaidBlock';
+import { ImageWithBase } from './nodes/ImageWithBase';
+import { VideoBlock } from './nodes/VideoBlock';
 import { buildMarkdownParser } from './markdown/parser';
 import { buildMarkdownSerializer } from './markdown/serializer';
 import { createBubbleMenu, BubbleMenuFactory } from './menus/BubbleMenu';
@@ -82,8 +85,15 @@ export class TiptapEditor {
         Link.configure({ openOnClick: false, autolink: false }),
         TextStyle,
         Color,
+        TextAlign.configure({
+          types: ['paragraph', 'heading'],
+          alignments: ['left', 'center', 'right'],
+          defaultAlignment: 'left',
+        }),
         LatexBlock,
         MermaidBlock,
+        ImageWithBase,
+        VideoBlock,
         this.bubbleMenu.extension,
         this.slashMenu.extension,
         this.blockHandle.extension,

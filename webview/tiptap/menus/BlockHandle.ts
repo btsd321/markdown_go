@@ -16,14 +16,33 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import { getInsertItems, InsertItem } from './insertItems';
 import { t, onLocaleChange } from '../../i18n';
 
-/** 根据块节点生成表示标签（对齐老版：H1/H2/H3/T/•/n./>/{ }/—/TeX/Mermaid） */
+/** 段落是否仅由 image 节点（及空白文本）组成 → 视为图片块 */
+function isImageOnlyParagraph(node: PMNode): boolean {
+  if (node.type.name !== 'paragraph') return false;
+  let hasImage = false;
+  let hasOther = false;
+  node.forEach((child) => {
+    if (child.type.name === 'image') {
+      hasImage = true;
+    } else if (child.isText) {
+      if ((child.text || '').trim().length > 0) hasOther = true;
+    } else {
+      hasOther = true;
+    }
+  });
+  return hasImage && !hasOther;
+}
+
+/** 根据块节点生成表示标签（对齐老版：H1/H2/H3/T/•/n./>/{ }/—/TeX/Mermaid/P） */
 function blockLabel(node: PMNode): string {
+  // “仅含图片的段落” 作为逻辑上的独立“图片块”，与 mermaidBlock / latexBlock 同级
+  if (isImageOnlyParagraph(node)) return '🖼️';
   switch (node.type.name) {
     case 'heading': {
       const level = (node.attrs as { level?: number }).level ?? 1;
       return `H${level}`;
     }
-    case 'paragraph': return 'T';
+    case 'paragraph': return node.content.size === 0 ? '+' : 'T';
     case 'bulletList': return '•';
     case 'orderedList': return 'n.';
     case 'blockquote': return '>';
@@ -31,6 +50,7 @@ function blockLabel(node: PMNode): string {
     case 'horizontalRule': return '—';
     case 'latexBlock': return 'TeX';
     case 'mermaidBlock': return 'Mermaid';
+    case 'videoBlock': return '🎬';
     default: return '+';
   }
 }
@@ -115,7 +135,7 @@ export function createBlockHandle(): BlockHandleController {
       // coordsAtPos 会返回块外缘——直接用 NodeView DOM rect 取垂直中点
       let topY: number;
       let bottomY: number;
-      if (node.isAtom || node.type.name === 'latexBlock' || node.type.name === 'mermaidBlock' || node.type.name === 'horizontalRule') {
+      if (node.isAtom || node.type.name === 'latexBlock' || node.type.name === 'mermaidBlock' || node.type.name === 'videoBlock' || node.type.name === 'horizontalRule') {
         const dom = view.nodeDOM(blockFrom) as HTMLElement | null;
         if (dom && typeof dom.getBoundingClientRect === 'function') {
           const r = dom.getBoundingClientRect();

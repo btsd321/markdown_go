@@ -8,6 +8,8 @@
  */
 import type { Editor } from '@tiptap/core';
 import { openPromptDialog } from '../../ui/PromptDialog';
+import { openImageDialog } from '../../ui/ImageDialog';
+import { openVideoDialog } from '../../ui/VideoDialog';
 import { t } from '../../i18n';
 
 export interface InsertItem {
@@ -120,6 +122,46 @@ export function getInsertItems(): InsertItem[] {
           type: 'mermaidBlock',
           attrs: { src: src.trim() },
         }).run();
+      },
+    },
+    {
+      key: 'image',
+      label: t('block.image'),
+      hint: '🖼',
+      keywords: ['image', 'img', 'picture', 'photo', '图片', 'tupian'],
+      run: async (e) => {
+        const result = await openImageDialog();
+        if (!result) return;
+        e.chain()
+          .focus()
+          .insertContent({
+            type: 'image',
+            attrs: { src: result.src, alt: result.alt || null, title: result.title || null },
+          })
+          .run();
+      },
+    },
+    {
+      key: 'video',
+      label: t('block.video'),
+      hint: '🎬',
+      keywords: ['video', 'movie', 'film', 'iframe', 'embed', '视频', 'shipin'],
+      run: async (e) => {
+        const result = await openVideoDialog();
+        if (!result) return;
+        e.chain()
+          .focus()
+          .insertContent({
+            type: 'videoBlock',
+            attrs: {
+              kind: result.kind,
+              src: result.src,
+              title: result.title || null,
+              width: null,
+              height: null,
+            },
+          })
+          .run();
       },
     },
   ];

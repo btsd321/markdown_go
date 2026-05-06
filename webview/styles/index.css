@@ -253,6 +253,141 @@ body {
   background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
 
+/* ---- 图片对话框（双 Tab） ---- */
+.modal-image-dialog {
+  width: min(560px, 92vw);
+}
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
+}
+.modal-tab {
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.modal-tab:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+.modal-tab.is-active {
+  border-bottom-color: var(--vscode-focusBorder, #007fd4);
+  font-weight: 600;
+}
+.modal-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.modal-image-localrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-image-pathlabel {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.modal-image-preview {
+  display: flex;
+  justify-content: center;
+  max-height: 200px;
+  overflow: hidden;
+  border: 1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
+  border-radius: 4px;
+  padding: 4px;
+  background: var(--vscode-editor-background);
+}
+.modal-image-preview img {
+  max-width: 100%;
+  max-height: 192px;
+  object-fit: contain;
+}
+
+/* ---- 视频对话框 ---- */
+.modal-video-kindrow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.modal-video-kindopt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.modal-video-preview {
+  display: flex;
+  justify-content: center;
+  max-height: 220px;
+  overflow: hidden;
+  border: 1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
+  border-radius: 4px;
+  padding: 4px;
+  background: var(--vscode-editor-background);
+}
+.modal-video-preview video {
+  max-width: 100%;
+  max-height: 212px;
+}
+
+/* ---- 编辑器内的视频块 ---- */
+.tiptap-host video,
+.ProseMirror video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+  margin: 0 auto;
+}
+.tiptap-video-iframe-wrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+}
+.tiptap-video-iframe-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.tiptap-host video.ProseMirror-selectednode,
+.ProseMirror video.ProseMirror-selectednode,
+.tiptap-host .tiptap-video-iframe-wrap.ProseMirror-selectednode,
+.ProseMirror .tiptap-video-iframe-wrap.ProseMirror-selectednode {
+  outline: 2px solid var(--vscode-focusBorder, #007fd4);
+}
+
+/* ---- 编辑器内的 inline 图片 ---- */
+.tiptap-host img,
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+.tiptap-host img.ProseMirror-selectednode,
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 2px;
+}
+
 /* ========== 纯文本 / 预览 视图 ========== */
 .viewport {
   position: relative;
@@ -458,6 +593,62 @@ body {
   border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
   background: transparent;
   cursor: pointer;
+}
+
+/* ---- 对齐按钮 / 下拉 ---- */
+.bubble-group-align {
+  position: relative;
+}
+.bubble-align-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+}
+.bubble-align-btn .bubble-align-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vscode-foreground);
+}
+.bubble-align-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 1600;
+}
+.bubble-align-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+.bubble-align-item:hover {
+  background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+.bubble-align-item.is-active {
+  background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+.bubble-align-item .bubble-align-icon {
+  display: inline-flex;
 }
 
 /* ========== SlashMenu（输入触发的浮动菜单） ========== */
