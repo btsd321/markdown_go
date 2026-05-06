@@ -17,6 +17,7 @@ import { createSlashMenu, SlashMenuController } from './menus/SlashMenu';
 import { createBlockHandle, BlockHandleController } from './menus/BlockHandle';
 import { createContextMenu, ContextMenuController } from './menus/ContextMenu';
 import { createClipboardCopy, ClipboardCopyController } from './menus/ClipboardCopy';
+import { createSmartPaste, SmartPasteController } from './menus/SmartPaste';
 import type { CopyFormat } from '../../shared';
 
 export interface TiptapEditorCallbacks {
@@ -44,6 +45,7 @@ export class TiptapEditor {
   private blockHandle: BlockHandleController;
   private contextMenu: ContextMenuController;
   private clipboardCopy: ClipboardCopyController;
+  private smartPaste: SmartPasteController;
 
   /** 上次主动写出的 markdown，用于回灌时识别 echo */
   private lastSentMarkdown: string | null = null;
@@ -64,6 +66,7 @@ export class TiptapEditor {
       initialFormat: options.defaultCopyFormat || 'markdown',
       getSerializer: () => this.serializer,
     });
+    this.smartPaste = createSmartPaste({ getParser: () => this.parser });
 
     this.editor = new TiptapCore({
       element: host,
@@ -78,6 +81,7 @@ export class TiptapEditor {
         this.blockHandle.extension,
         this.contextMenu.extension,
         this.clipboardCopy.extension,
+        this.smartPaste.extension,
       ],
       content: '',
       autofocus: false,
@@ -91,6 +95,7 @@ export class TiptapEditor {
     this.blockHandle.bind(this.editor);
     this.contextMenu.bind(this.editor);
     this.clipboardCopy.bind(this.editor);
+    this.smartPaste.bind(this.editor);
   }
 
   /** 用初始 markdown 启动 */
