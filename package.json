@@ -55,8 +55,8 @@
             "zh-cn",
             "en"
           ],
-          "default": "zh-cn",
-          "description": "Editor UI language"
+          "default": "en",
+          "description": "%config.language.description%"
         },
         "markdownGo.defaultMode": {
           "type": "string",

@@ -145,7 +145,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     document: vscode.TextDocument
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration('markdownGo');
-    const language = (config.get<string>('language') || 'zh-cn') as LanguageCode;
+    const language = (config.get<string>('language') || 'en') as LanguageCode;
     const defaultMode = (config.get<string>('defaultMode') || 'edit') as DisplayMode;
     const slashTrigger = config.get<string>('slashTrigger') || '/';
     const keybindings =

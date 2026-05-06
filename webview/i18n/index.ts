@@ -113,7 +113,7 @@ const EN: Dict = {
 
 const DICTS: Record<LanguageCode, Dict> = { 'zh-cn': ZH, en: EN };
 
-let locale: LanguageCode = 'zh-cn';
+let locale: LanguageCode = 'en';
 const subscribers = new Set<() => void>();
 
 export function setLocale(l: LanguageCode): void {

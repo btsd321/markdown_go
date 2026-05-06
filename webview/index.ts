@@ -23,7 +23,7 @@ class App {
   private previewHost!: HTMLElement;
   private menubarHost!: HTMLElement;
   private currentMode: DisplayMode = 'edit';
-  private currentLanguage: LanguageCode = 'zh-cn';
+  private currentLanguage: LanguageCode = 'en';
   private currentMarkdown = '';
   private lastSentByPlain: string | null = null;
   private initialized = false;
