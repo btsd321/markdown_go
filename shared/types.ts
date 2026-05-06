@@ -1,0 +1,144 @@
+/**
+ * 消息类型枚举
+ */
+export enum MessageType {
+  // 生命周期
+  READY = 'ready',
+  INIT = 'init',
+  DISPOSE = 'dispose',
+
+  // 文档同步
+  DOC_SYNC = 'doc.sync',
+  DOC_CHANGE = 'doc.change',
+  DOC_SAVE = 'doc.save',
+
+  // 模式与语言
+  MODE_CHANGE = 'mode.change',
+  LANG_CHANGE = 'lang.change',
+
+  // 命令
+  COMMAND_EXECUTE = 'command.execute',
+  COMMAND_RESULT = 'command.result',
+
+  // 日志与错误
+  LOG = 'log',
+  ERROR = 'error',
+}
+
+/**
+ * 消息基础结构
+ */
+export interface Message<T = any> {
+  id?: string;
+  type: MessageType;
+  source: 'extension' | 'webview';
+  payload: T;
+  timestamp: number;
+}
+
+/**
+ * 显示模式
+ */
+export type DisplayMode = 'edit' | 'preview' | 'plain';
+
+/**
+ * 支持的语言代码
+ */
+export type LanguageCode = 'zh-cn' | 'en';
+
+/**
+ * 块类型
+ */
+export type BlockType =
+  | 'paragraph'
+  | 'heading-1'
+  | 'heading-2'
+  | 'heading-3'
+  | 'latex'
+  | 'mermaid';
+
+/**
+ * 文档块
+ */
+export interface Block {
+  id: string;
+  type: BlockType;
+  content: string;
+  meta?: Record<string, any>;
+}
+
+/**
+ * 文档编辑操作
+ */
+export interface DocumentEdit {
+  range: {
+    startLine: number;
+    startChar: number;
+    endLine: number;
+    endChar: number;
+  };
+  newText: string;
+}
+
+/**
+ * 配置快照
+ */
+export interface ConfigSnapshot {
+  language: LanguageCode;
+  defaultMode: DisplayMode;
+  slashTrigger: string;
+}
+
+// ============ 消息 Payload 类型 ============
+
+export interface ReadyPayload {
+  version: string;
+}
+
+export interface InitPayload {
+  content: string;
+  language: LanguageCode;
+  mode: DisplayMode;
+  config: ConfigSnapshot;
+}
+
+export interface DocSyncPayload {
+  content: string;
+  version: number;
+  source: 'user' | 'external';
+}
+
+export interface DocChangePayload {
+  edits: DocumentEdit[];
+  baseVersion: number;
+}
+
+export interface ModeChangePayload {
+  mode: DisplayMode;
+}
+
+export interface LangChangePayload {
+  language: LanguageCode;
+}
+
+export interface CommandExecutePayload {
+  commandId: string;
+  args?: any;
+}
+
+export interface CommandResultPayload {
+  commandId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface LogPayload {
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  data?: any;
+}
+
+export interface ErrorPayload {
+  message: string;
+  stack?: string;
+}

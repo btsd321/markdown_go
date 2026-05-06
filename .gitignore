@@ -3,3 +3,15 @@ agent_docs/
 CLAUDE.MD
 .claude/
 .vscode/
+
+# Build outputs
+node_modules/
+dist/
+media/*.js
+media/*.js.map
+media/*.css
+media/*.css.map
+*.vsix
+
+# OS
+.DS_Store

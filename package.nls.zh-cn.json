@@ -1,0 +1,10 @@
+{
+  "ext.description": "面向零基础用户的所见即所得 Markdown 编辑器",
+  "editor.displayName": "Markdown Go 编辑器",
+  "command.openWith.title": "使用 Markdown Go 打开",
+  "command.switchMode.title": "切换显示模式",
+  "command.switchLanguage.title": "切换语言",
+  "config.language.description": "编辑器界面语言",
+  "config.defaultMode.description": "打开文档时的默认显示模式",
+  "config.slashTrigger.description": "触发主下拉菜单的字符"
+}

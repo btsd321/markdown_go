@@ -1,0 +1,10 @@
+{
+  "ext.description": "WYSIWYG Markdown editor for beginners",
+  "editor.displayName": "Markdown Go Editor",
+  "command.openWith.title": "Open with Markdown Go",
+  "command.switchMode.title": "Switch Mode",
+  "command.switchLanguage.title": "Switch Language",
+  "config.language.description": "Editor UI language",
+  "config.defaultMode.description": "Default display mode when opening a document",
+  "config.slashTrigger.description": "Character that triggers the slash menu"
+}

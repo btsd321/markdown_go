@@ -1,0 +1,86 @@
+{
+  "name": "markdown-go",
+  "displayName": "Markdown Go",
+  "description": "%ext.description%",
+  "version": "0.0.1",
+  "publisher": "markdown-go",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "markdownGo.editor",
+        "displayName": "%editor.displayName%",
+        "selector": [
+          { "filenamePattern": "*.md" },
+          { "filenamePattern": "*.MD" }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "markdownGo.openWith",
+        "title": "%command.openWith.title%",
+        "category": "Markdown Go"
+      },
+      {
+        "command": "markdownGo.switchMode",
+        "title": "%command.switchMode.title%",
+        "category": "Markdown Go"
+      },
+      {
+        "command": "markdownGo.switchLanguage",
+        "title": "%command.switchLanguage.title%",
+        "category": "Markdown Go"
+      }
+    ],
+    "configuration": {
+      "title": "Markdown Go",
+      "properties": {
+        "markdownGo.language": {
+          "type": "string",
+          "enum": ["zh-cn", "en"],
+          "default": "zh-cn",
+          "description": "%config.language.description%"
+        },
+        "markdownGo.defaultMode": {
+          "type": "string",
+          "enum": ["edit", "preview", "plain"],
+          "default": "edit",
+          "description": "%config.defaultMode.description%"
+        },
+        "markdownGo.slashTrigger": {
+          "type": "string",
+          "default": "/",
+          "description": "%config.slashTrigger.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.extension.json && tsc --noEmit -p tsconfig.webview.json"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^13.0.7",
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "katex": "^0.16.9",
+    "markdown-it": "^14.0.0",
+    "mermaid": "^10.6.1"
+  }
+}
