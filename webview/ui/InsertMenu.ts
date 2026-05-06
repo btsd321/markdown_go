@@ -20,6 +20,7 @@ export const DEFAULT_INSERT_MENU: InsertMenuItem[] = [
   { label: '有序列表  1.', type: 'list-ordered' },
   { label: 'LaTeX 公式', type: 'latex', initial: 'E = mc^2' },
   { label: 'Mermaid 流程图', type: 'mermaid', initial: 'graph LR\n  A --> B' },
+  { label: '代码块  { }', type: 'code', initial: '' },
 ];
 
 export function renderInsertMenu(

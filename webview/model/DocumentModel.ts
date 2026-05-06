@@ -24,19 +24,26 @@ export class DocumentModel {
 
     // 围栏类型：
     //   - 'mermaid' → ```mermaid ... ```
+    //   - 'code'    → ```lang ... ```（其它语言或无语言）
     //   - 'latex'   → $$ ... $$（独占一行）
-    type FenceKind = 'latex' | 'mermaid';
+    type FenceKind = 'latex' | 'mermaid' | 'code';
     let fence: FenceKind | null = null;
+    let fenceLang = '';
     let buf: string[] = [];
 
     const flushFence = () => {
       if (!fence) return;
-      newBlocks.push({
+      const block: Block = {
         id: this.generateId(),
         type: fence,
         content: buf.join('\n'),
-      });
+      };
+      if (fence === 'code' && fenceLang) {
+        block.meta = { lang: fenceLang };
+      }
+      newBlocks.push(block);
       fence = null;
+      fenceLang = '';
       buf = [];
     };
 
@@ -44,7 +51,7 @@ export class DocumentModel {
       const trimmed = line.trim();
 
       // 已在围栏内：判断是否到达对应的结束标记
-      if (fence === 'mermaid') {
+      if (fence === 'mermaid' || fence === 'code') {
         if (trimmed.startsWith('```')) {
           flushFence();
         } else {
@@ -61,15 +68,19 @@ export class DocumentModel {
         continue;
       }
 
-      // 围栏开始：```mermaid
+      // 围栏开始：```lang
       if (trimmed.startsWith('```')) {
-        const lang = trimmed.slice(3).toLowerCase();
-        if (lang === 'mermaid') {
+        const lang = trimmed.slice(3).trim();
+        if (lang.toLowerCase() === 'mermaid') {
           fence = 'mermaid';
           buf = [];
           continue;
         }
-        // 其他语言的代码块暂不特殊处理，按普通段落保留
+        // 其他语言（含空语言）作为通用代码块
+        fence = 'code';
+        fenceLang = lang;
+        buf = [];
+        continue;
       }
 
       // 围栏开始：$$（独占一行）
@@ -173,6 +184,13 @@ export class DocumentModel {
           for (const l of block.content.split('\n')) lines.push(l);
           lines.push('```');
           break;
+        case 'code': {
+          const lang = (block.meta && typeof block.meta.lang === 'string') ? block.meta.lang : '';
+          lines.push('```' + lang);
+          for (const l of block.content.split('\n')) lines.push(l);
+          lines.push('```');
+          break;
+        }
         case 'paragraph':
         default:
           lines.push(block.content);

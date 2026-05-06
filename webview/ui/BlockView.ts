@@ -23,6 +23,8 @@ function handleLabelOf(type: Block['type']): string {
       return 'fx';
     case 'mermaid':
       return 'M';
+    case 'code':
+      return '{ }';
     case 'paragraph':
     default:
       return '+';
@@ -56,7 +58,7 @@ export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement 
   root.className = 'block';
   root.dataset.id = block.id;
   root.dataset.type = block.type;
-  const needsPreview = block.type === 'mermaid' || block.type === 'latex';
+  const needsPreview = block.type === 'mermaid' || block.type === 'latex' || block.type === 'code';
   if (needsPreview) root.classList.add('has-preview');
 
   // 行首 + 按钮

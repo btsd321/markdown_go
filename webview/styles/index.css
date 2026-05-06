@@ -147,12 +147,22 @@ body {
   user-select: none;
 }
 .block[data-type='latex'] .block-content,
-.block[data-type='mermaid'] .block-content {
+.block[data-type='mermaid'] .block-content,
+.block[data-type='code'] .block-content {
   font-family: var(--vscode-editor-font-family, monospace);
   background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
   padding: 8px 10px;
   border-radius: 3px;
   font-size: 0.95em;
+}
+
+/* 代码块预览：等宽、保留空白 */
+.block-preview pre.code-block {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.95em;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 /* 预览容器（mermaid 等）：当块未激活时显示渲染结果 */

@@ -57,7 +57,8 @@ export type BlockType =
   | 'list-unordered'
   | 'list-ordered'
   | 'latex'
-  | 'mermaid';
+  | 'mermaid'
+  | 'code';
 
 /**
  * 文档块

@@ -171,7 +171,7 @@ export class Editor {
   private enterEditing(id: string): void {
     const block = this.model.getBlock(id);
     if (!block) return;
-    if (block.type !== 'latex' && block.type !== 'mermaid') return;
+    if (block.type !== 'latex' && block.type !== 'mermaid' && block.type !== 'code') return;
     this.activeBlockId = id;
     this.editingBlockId = id;
     this.applyActiveClass();
@@ -325,7 +325,7 @@ export class Editor {
   private enterAfter(blockId: string): void {
     // fenced 块编辑中 Enter → 提交并退出编辑模式
     const block = this.model.getBlock(blockId);
-    if (block && (block.type === 'latex' || block.type === 'mermaid')) {
+    if (block && (block.type === 'latex' || block.type === 'mermaid' || block.type === 'code')) {
       this.exitEditing();
       return;
     }
@@ -489,13 +489,20 @@ export class Editor {
   }
 
   private insertBlockAfter(blockId: string, item: InsertMenuItem): void {
-    // LaTeX / Mermaid：先弹出输入对话框，让用户粘贴源码
-    if (item.type === 'latex' || item.type === 'mermaid') {
-      const title = item.type === 'latex' ? '插入 LaTeX 公式' : '插入 Mermaid 图';
+    // LaTeX / Mermaid / Code：先弹出输入对话框，让用户粘贴源码
+    if (item.type === 'latex' || item.type === 'mermaid' || item.type === 'code') {
+      const title =
+        item.type === 'latex'
+          ? '插入 LaTeX 公式'
+          : item.type === 'mermaid'
+            ? '插入 Mermaid 图'
+            : '插入代码块';
       const placeholder =
         item.type === 'latex'
           ? '在此输入或粘贴 LaTeX 源码，例如：E = mc^2'
-          : '在此输入或粘贴 Mermaid 源码，例如：graph LR\\n  A --> B';
+          : item.type === 'mermaid'
+            ? '在此输入或粘贴 Mermaid 源码，例如：graph LR\\n  A --> B'
+            : '在此输入或粘贴代码（Shift+Enter 换行，Enter 确定）';
       openPromptDialog({
         title,
         placeholder,
@@ -512,7 +519,7 @@ export class Editor {
   /** 真正执行块的插入或替换（当前块为空时直接转换类型） */
   private commitInsert(blockId: string, item: InsertMenuItem): void {
     this.flushPendingSnapshot();
-    const isFenced = item.type === 'latex' || item.type === 'mermaid';
+    const isFenced = item.type === 'latex' || item.type === 'mermaid' || item.type === 'code';
 
     const current = this.model.getBlock(blockId);
     if (current && current.content.length === 0) {
@@ -557,6 +564,21 @@ export class Editor {
       const res = renderLatexBlock(block.content);
       previewEl.classList.toggle('is-error', !res.ok);
       previewEl.innerHTML = res.html;
+      return;
+    }
+
+    if (block.type === 'code') {
+      // 代码块：纯文本渲染（保留空白），用 <pre><code>
+      previewEl.classList.remove('is-error');
+      const pre = document.createElement('pre');
+      pre.className = 'code-block';
+      const codeEl = document.createElement('code');
+      const lang = block.meta && typeof block.meta.lang === 'string' ? block.meta.lang : '';
+      if (lang) codeEl.dataset.lang = lang;
+      codeEl.textContent = block.content;
+      pre.appendChild(codeEl);
+      previewEl.innerHTML = '';
+      previewEl.appendChild(pre);
       return;
     }
 
