@@ -1,0 +1,5 @@
+agent_docs/
+.ref_project/
+CLAUDE.MD
+.claude/
+.vscode/
