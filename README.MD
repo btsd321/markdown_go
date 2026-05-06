@@ -1,88 +1,149 @@
 # Markdown Go
 
-一个面向零基础用户的所见即所得 VSCode Markdown 编辑器。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-## 功能特性
+**English** | [简体中文](./README.zh-CN.md)
 
-- 🎯 所见即所得编辑体验
-- 📝 无需掌握 Markdown 语法
-- 🎨 支持 LaTeX 公式渲染
-- 📊 支持 Mermaid 流程图
-- 🌍 中英文界面切换
-- 🔄 三种显示模式（编辑/预览/纯文本）
+A WYSIWYG Markdown editor for VS Code, designed for users who don't want to learn Markdown syntax. What you see is exactly what you get — no `#`, `*`, or `>` symbols on screen.
 
-## 开发状态
+> Actively developed. Feedback and PRs are welcome.
 
-当前版本：**0.0.1-alpha**
+## Features
 
-### 已完成
+### Editing experience
 
-- ✅ 项目脚手架搭建
-- ✅ Extension 端基础架构
-- ✅ Webview 通信桥
-- ✅ 文档模型（块级结构）
-- ✅ 命令注册系统
-- ✅ 基础构建流程
+- 🎯 **WYSIWYG** — Rendered output is shown directly; raw Markdown symbols are hidden
+- ➕ **Line-start `+` button** — One-click insert for headings (H1–H6, H4–H6 inside a submenu), paragraph, lists, blockquote, code block, divider, LaTeX, Mermaid, image, video
+- ⌨️ **Slash menu** — Type `/` to open the insert menu with fuzzy search (e.g. `/h5`, `/mermaid`)
+- 🫧 **Bubble menu** — Appears on selection: change block type, alignment, bold/italic/link, text color
+- 📋 **Smart paste** — Detects Markdown text, rich text, and images automatically
+- ↩️ **Ergonomic shortcuts** — Auto-continue lists on Enter, exit list on empty Enter, restore alignment / leave list on Backspace at line start
 
-### 进行中
+### Block rendering
 
-- 🚧 UI 组件实现
-- 🚧 渲染引擎集成
-- 🚧 国际化支持
+- 🧮 **LaTeX** (KaTeX) — Block `$$ … $$`, double-click to edit source
+- 📊 **Mermaid** — Live diagrams, double-click to toggle source mode
+- 🖼️ **Images** — Local relative / absolute paths or remote URLs; `localResourceRoots` registered automatically
+- 🎬 **Video / iframe** — Insert `<video>` and `<iframe>` via URL or local file picker
+- 📐 **Block alignment** — Left / center / right for paragraphs, headings, images (serialized as `<div align="…">` for GitHub compatibility)
+- 🎨 **Inline text color** — Serialized as `<span style="color:…">`
 
-### 待开发
+### Display modes
 
-- ⏳ 行首按钮与下拉菜单
-- ⏳ 模式切换控制器
-- ⏳ 完整的编辑交互
+| Mode      | Description                                      |
+| --------- | ------------------------------------------------ |
+| `edit`    | WYSIWYG editing (default)                        |
+| `preview` | Read-only preview; all editing controls hidden   |
+| `plain`   | Show raw Markdown source                         |
 
-## 开发
+### Integration
+
+- 📁 **Explorer right-click** — "Open with Markdown Go"
+- 🪟 **Editor title / context menu** — Same entry point
+- ⌨️ **Keybinding** `Ctrl+Shift+M` / `Cmd+Shift+M` (on Markdown files)
+- 🌍 **English / Chinese UI** — Follows VS Code display language or switch manually
+
+## Install & use
 
 ```bash
-# 安装依赖
+# Clone & build
 npm install
-
-# 构建
 npm run build
 
-# 监听模式
-npm run watch
-
-# 类型检查
-npm run typecheck
-
-# 调试
-# 按 F5 启动 Extension Development Host
+# Press F5 in VS Code to launch the Extension Development Host
 ```
 
-## 项目结构
+Once any `.md` file is open:
+
+- Run **Markdown Go: Open With Markdown Go** from the command palette (`Ctrl+Shift+P`)
+- Or right-click in the explorer / editor tab and choose **Open with Markdown Go**
+- Or press `Ctrl+Shift+M`
+
+## Commands
+
+| Command ID                   | Title                       | Description                                      |
+| ---------------------------- | --------------------------- | ------------------------------------------------ |
+| `markdownGo.openWith`        | Open With Markdown Go       | Open the current Markdown with this extension    |
+| `markdownGo.switchMode`      | Switch Display Mode         | Cycle through edit / preview / plain             |
+| `markdownGo.switchLanguage`  | Switch Language             | Toggle English / Chinese UI                      |
+
+## Configuration
+
+Configure under `markdownGo.*` in `settings.json`:
+
+| Setting                        | Type                              | Default      | Description                                                  |
+| ------------------------------ | --------------------------------- | ------------ | ------------------------------------------------------------ |
+| `markdownGo.language`          | `"zh-cn" \| "en"`                 | `"en"`       | Editor UI language                                           |
+| `markdownGo.defaultMode`       | `"edit" \| "preview" \| "plain"`  | `"edit"`     | Default display mode when opening a document                 |
+| `markdownGo.slashTrigger`      | `string`                          | `"/"`        | Character that triggers the slash menu                       |
+| `markdownGo.defaultCopyFormat` | `"markdown" \| "plain"`           | `"markdown"` | Default copy format                                          |
+| `markdownGo.keybindings`       | `object`                          | `{}`         | Override editor keybindings (command ID → chord or array)    |
+
+Supported `markdownGo.keybindings` command IDs:
+
+- `editor.undo` / `editor.redo`
+- `editor.enter` / `editor.softLineBreak`
+- `editor.backspaceAtStart`
+- `editor.indent` / `editor.outdent`
+
+Modifiers: `Ctrl` / `Cmd` / `Shift` / `Alt`, plus cross-platform `Mod` (Mac → Cmd, others → Ctrl). Use `""` to unbind a default. Example:
+
+```json
+"markdownGo.keybindings": {
+  "editor.indent": "Tab",
+  "editor.redo": ["Mod+Y", "Mod+Shift+Z"]
+}
+```
+
+## Project structure
 
 ```
 markdown-go/
-├── src/                    # Extension 端
-│   ├── extension.ts        # 插件入口
-│   └── editorProvider/     # 自定义编辑器
-├── webview/                # Webview 端
-│   ├── index.ts            # Webview 入口
-│   ├── core/               # 核心模块
-│   ├── model/              # 文档模型
-│   ├── components/         # UI 组件
-│   └── renderers/          # 渲染引擎
-├── shared/                 # 共享类型
-├── l10n/                   # 语言包
-└── agent_docs/             # 设计文档
+├── src/                    # Extension side
+│   ├── extension.ts        # Entry & command registration
+│   └── editorProvider/     # Custom editor provider
+├── webview/                # Webview side (Tiptap editor)
+│   ├── index.ts            # Entry
+│   ├── core/               # Bridge & command registry
+│   ├── tiptap/             # Tiptap nodes / extensions / menus / Markdown serialization
+│   ├── ui/                 # Dialogs and other UI
+│   ├── runtime/            # Runtime helpers (image resolution, etc.)
+│   ├── i18n/               # Webview i18n
+│   └── styles/             # Stylesheets
+├── shared/                 # Shared types between extension & webview
+├── scripts/                # Build scripts (esbuild)
+├── assets/                 # Static assets
+└── agent_docs/             # Design / requirements / task docs
 ```
 
-## 技术栈
+## Tech stack
 
-- TypeScript
-- VSCode Extension API
-- esbuild
-- Tiptap (基于 ProseMirror) — 编辑器内核 / Schema / 跨块选区 / 撤销重做
-- prosemirror-markdown — Markdown ↔ 文档双向序列化
-- KaTeX — LaTeX 公式
-- Mermaid — 流程图
+- **TypeScript** + **VS Code Extension API**
+- **esbuild** — bundler
+- **Tiptap 2 / ProseMirror** — editor core (schema, cross-block selection, undo/redo)
+- **prosemirror-markdown** + **markdown-it (commonmark)** — Markdown ↔ ProseMirror round-trip
+- **KaTeX** — LaTeX rendering
+- **Mermaid** — diagram rendering
 
-## 许可证
+## Development
 
-MIT
+```bash
+npm install            # install dependencies
+npm run build          # one-shot build
+npm run watch          # incremental watch build
+npm run typecheck      # type-check both extension & webview projects
+# Press F5 to launch the Extension Development Host
+```
+
+## Reference projects
+
+This project draws inspiration from these excellent VS Code Markdown extensions:
+
+- [Markdown All in One](https://github.com/yzhang-gh/vscode-markdown)
+- [Markdown Preview Mermaid Support](https://github.com/mjbvz/vscode-markdown-mermaid)
+- [LaTeX (vscode-latex)](https://github.com/mathematic-inc/vscode-latex)
+- [Markdown+Math (mdmath)](https://github.com/goessner/mdmath)
+
+## License
+
+Released under the [MIT License](./LICENSE).
