@@ -25,6 +25,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { InsertItem, filterItems } from './insertItems';
 import { onLocaleChange } from '../../i18n';
+import { t } from '../../i18n';
 
 interface SlashState {
   active: boolean;
@@ -57,6 +58,8 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
   let editorRef: Editor | null = null;
   let activeIndex = 0;
   let visibleItems: InsertItem[] = [];
+  /** 子菜单覆盖列表：非空时 render 走它，忽略 query 过滤 */
+  let overrideItems: InsertItem[] | null = null;
   let currentState: SlashState = { active: false, from: 0, query: '' };
   let lastView: EditorView | null = null;
 
@@ -68,11 +71,16 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
   function hide() {
     popup.style.display = 'none';
     visibleItems = [];
+    overrideItems = null;
   }
 
   function render(state: SlashState, view: EditorView) {
     lastView = view;
-    visibleItems = filterItems(state.query);
+    if (overrideItems) {
+      visibleItems = overrideItems;
+    } else {
+      visibleItems = filterItems(state.query);
+    }
     if (visibleItems.length === 0) {
       hide();
       return;
@@ -128,6 +136,25 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
     if (!editorRef) return;
     const item = visibleItems[index];
     if (!item) return;
+    // 返回上一级
+    if (item.key === '__back__') {
+      overrideItems = null;
+      activeIndex = 0;
+      if (lastView) render(currentState, lastView);
+      return;
+    }
+    // 子菜单：替换 visibleItems = [back, ...children]，不删 trigger 文本
+    if (item.children && item.children.length) {
+      const back: InsertItem = {
+        key: '__back__',
+        label: t('menu.back'),
+        keywords: [],
+      };
+      overrideItems = [back, ...item.children];
+      activeIndex = 0;
+      if (lastView) render(currentState, lastView);
+      return;
+    }
     const view = editorRef.view;
     const { from } = currentState;
     const to = view.state.selection.from;
@@ -137,7 +164,7 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
     }
     // 立即关闭
     hide();
-    // 执行命令
+    if (!item.run) return;
     Promise.resolve(item.run(editorRef)).catch((err) => {
       // eslint-disable-next-line no-console
       console.error('[slashMenu] run failed', err);
@@ -180,12 +207,14 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
     view: (view) => {
       const update = () => {
         const next = detect(view);
+        const queryChanged = next.query !== currentState.query;
         currentState = next;
         if (!next.active) {
           hide();
           return;
         }
-        // 若 query 变了或刚激活，重置高亮到 0
+        // query 变化 → 退出子菜单覆盖，回到过滤后的顶级列表
+        if (queryChanged) overrideItems = null;
         activeIndex = 0;
         render(next, view);
       };

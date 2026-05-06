@@ -18,8 +18,25 @@ export interface InsertItem {
   hint?: string;
   /** 关键字（用于过滤） */
   keywords: string[];
-  /** 执行命令（光标已置于目标块） */
-  run: (editor: Editor) => unknown | Promise<unknown>;
+  /** 执行命令（光标已置于目标块）。当存在 children 时可省略，点击展开子菜单 */
+  run?: (editor: Editor) => unknown | Promise<unknown>;
+  /** 子菜单：点击该项展示这些子项（取代 run） */
+  children?: InsertItem[];
+}
+
+/** H4..H6 子项工厂 */
+function headingChildren(): InsertItem[] {
+  const out: InsertItem[] = [];
+  for (let lv = 4; lv <= 6; lv++) {
+    out.push({
+      key: `h${lv}`,
+      label: t(`block.h${lv}` as any),
+      hint: `H${lv}`,
+      keywords: [`h${lv}`, `heading${lv}`, '标题', 'biaoti'],
+      run: (e) => e.chain().focus().setNode('heading', { level: lv }).run(),
+    });
+  }
+  return out;
 }
 
 /** 每次调用返回当前语言下的最新一份列表（label / hint 实时本地化） */
@@ -45,6 +62,13 @@ export function getInsertItems(): InsertItem[] {
       hint: 'H3',
       keywords: ['h3', 'heading3', '标题'],
       run: (e) => e.chain().focus().setNode('heading', { level: 3 }).run(),
+    },
+    {
+      key: 'h-more',
+      label: t('block.headingMore'),
+      hint: 'H4–H6',
+      keywords: ['h4', 'h5', 'h6', 'heading', '标题', 'biaoti'],
+      children: headingChildren(),
     },
     {
       key: 'p',
@@ -171,7 +195,16 @@ export function filterItems(query: string): InsertItem[] {
   const items = getInsertItems();
   const q = query.trim().toLowerCase();
   if (!q) return items;
-  return items.filter((it) => {
+  // 非空查询：把所有节点（含 children）摊平后做匹配；命中的叶子直接展示
+  const flat: InsertItem[] = [];
+  const walk = (list: InsertItem[]) => {
+    for (const it of list) {
+      if (it.children && it.children.length) walk(it.children);
+      else flat.push(it);
+    }
+  };
+  walk(items);
+  return flat.filter((it) => {
     if (it.label.toLowerCase().includes(q)) return true;
     return it.keywords.some((k) => k.toLowerCase().includes(q));
   });

@@ -240,6 +240,25 @@ export function createBlockHandle(): BlockHandleController {
     if (!editorRef) return;
     const item = menuItems[index];
     if (!item) return;
+    // 返回上一级：仅重渲染菜单，不插入任何节点
+    if (item.key === '__back__') {
+      menuItems = getInsertItems();
+      menuActiveIndex = 0;
+      renderMenu(menuItems);
+      return;
+    }
+    // 子菜单：替换为 [back, ...children]，不插入新段
+    if (item.children && item.children.length) {
+      const back: InsertItem = {
+        key: '__back__',
+        label: t('menu.back'),
+        keywords: [],
+      };
+      menuItems = [back, ...item.children];
+      menuActiveIndex = 0;
+      renderMenu(menuItems);
+      return;
+    }
     const insertAt = currentBlockEnd;
     hideMenu();
     if (insertAt < 0) return;
@@ -253,6 +272,7 @@ export function createBlockHandle(): BlockHandleController {
     view.dispatch(tr);
     editorRef.commands.focus(insertAt + 1);
     // 3) 执行 item.run
+    if (!item.run) return;
     Promise.resolve(item.run(editorRef)).catch((err) => {
       // eslint-disable-next-line no-console
       console.error('[blockHandle] run failed', err);
