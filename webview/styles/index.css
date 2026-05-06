@@ -243,6 +243,49 @@ body {
   margin: 4px 0;
 }
 
+/* ========== 多块选区浮动工具栏 ========== */
+.selection-toolbar {
+  position: fixed;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--vscode-menu-background, var(--vscode-editor-background));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+.selection-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-family: inherit;
+}
+.selection-toolbar-btn:hover:not(.is-disabled):not([disabled]) {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+.selection-toolbar-btn.is-disabled,
+.selection-toolbar-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+.selection-toolbar-menu {
+  position: fixed;
+  z-index: 1101;
+}
+
 /* ========== 模态对话框 ========== */
 .modal-overlay {
   position: fixed;

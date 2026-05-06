@@ -16,6 +16,11 @@ import {
 } from '../ui/InsertMenu';
 import { openPromptDialog } from '../ui/PromptDialog';
 import {
+  showSelectionToolbar,
+  SelectionToolbarHandle,
+  BlockTypeOption,
+} from '../ui/SelectionToolbar';
+import {
   getCaretOffset,
   setCaretOffset,
   setCaretToEnd,
@@ -52,6 +57,10 @@ export class Editor {
   private lastSentMarkdown: string | null = null;
   /** 快捷键表；可通过 setKeybindings() 运行时更新 */
   private keybindings = new Keybindings();
+  /** 当前显示的多块选区工具栏 */
+  private selectionToolbar: SelectionToolbarHandle | null = null;
+  /** 工具栏针对的被选块 ID 列表（按文档顺序） */
+  private toolbarBlockIds: string[] = [];
 
   constructor(
     private readonly host: HTMLElement,
@@ -62,6 +71,38 @@ export class Editor {
     document.addEventListener('mousedown', (e) => {
       if (this.openPopup && !this.openPopup.contains(e.target as Node)) {
         this.closePopup();
+      }
+      // 点击在选区工具栏外 → 关闭
+      if (
+        this.selectionToolbar &&
+        !(e.target as HTMLElement).closest('.selection-toolbar, .selection-toolbar-menu')
+      ) {
+        // 让 mouseup 后的 selectionchange 处理是否重新弹出；这里仅在点击非编辑区时强制关
+        if (!this.host.contains(e.target as Node)) {
+          this.dismissSelectionToolbar();
+        }
+      }
+    });
+
+    // 鼠标抬起 / 选区变化 → 评估是否显示多块工具栏
+    document.addEventListener('mouseup', () => {
+      // 让浏览器先确定选区
+      requestAnimationFrame(() => this.evaluateSelectionToolbar());
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.selectionToolbar) {
+        this.dismissSelectionToolbar();
+      }
+    });
+    document.addEventListener('selectionchange', () => {
+      // 选区缩到单块或折叠 → 关闭
+      if (!this.selectionToolbar) return;
+      const ids = this.computeSelectedBlockIds();
+      if (ids.length < 2) {
+        this.dismissSelectionToolbar();
+      } else {
+        this.toolbarBlockIds = ids;
+        this.selectionToolbar.reposition();
       }
     });
   }
@@ -604,5 +645,84 @@ export class Editor {
         previewEl.textContent = `Mermaid 渲染失败：${res.message}`;
       }
     });
+  }
+
+  // ============ 多块选区工具栏 ============
+
+  /** 计算当前 DOM 选区覆盖的块 ID 列表（按文档顺序，去重） */
+  private computeSelectedBlockIds(): string[] {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return [];
+    const range = sel.getRangeAt(0);
+
+    // 收集所有跟选区相交的 .block 元素
+    const blocks = this.model.getAllBlocks();
+    const matched: string[] = [];
+    for (const b of blocks) {
+      const el = this.blockEls.get(b.id);
+      if (!el) continue;
+      if (range.intersectsNode(el)) matched.push(b.id);
+    }
+    return matched;
+  }
+
+  private evaluateSelectionToolbar(): void {
+    const ids = this.computeSelectedBlockIds();
+    if (ids.length < 2) {
+      this.dismissSelectionToolbar();
+      return;
+    }
+    this.toolbarBlockIds = ids;
+    if (!this.selectionToolbar) {
+      this.selectionToolbar = showSelectionToolbar({
+        onPickBlockType: (opt) => this.applyToolbarTransform(opt),
+      });
+    } else {
+      this.selectionToolbar.reposition();
+    }
+  }
+
+  private dismissSelectionToolbar(): void {
+    if (this.selectionToolbar) {
+      this.selectionToolbar.dispose();
+      this.selectionToolbar = null;
+    }
+    this.toolbarBlockIds = [];
+  }
+
+  private applyToolbarTransform(opt: BlockTypeOption): void {
+    const ids = this.toolbarBlockIds.slice();
+    this.dismissSelectionToolbar();
+    if (ids.length === 0) return;
+
+    this.flushPendingSnapshot();
+
+    if (opt.type === 'code-merge') {
+      // 合并为单个代码块：取首块 ID，把所有块内容用 \n 连接
+      const contents = ids
+        .map((id) => this.model.getBlock(id))
+        .filter((b): b is Block => !!b)
+        .map((b) => b.content);
+      const firstId = ids[0];
+      this.silentUpdate(firstId, {
+        type: 'code',
+        content: contents.join('\n'),
+        meta: { lang: '' },
+      });
+      // 删除其余块
+      for (let i = 1; i < ids.length; i++) {
+        this.model.deleteBlock(ids[i]);
+      }
+      this.activeBlockId = firstId;
+    } else {
+      const newType = opt.type;
+      for (const id of ids) {
+        this.silentUpdate(id, { type: newType });
+      }
+    }
+
+    this.render();
+    this.history.push(this.captureSnapshot());
+    this.scheduleSync();
   }
 }
