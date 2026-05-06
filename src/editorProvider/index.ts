@@ -423,16 +423,14 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
   }
 }
 
-/** 把 abs 转为相对 base 的 POSIX 风格路径；不在子目录则返回绝对路径 */
+/** 把 abs 转为相对 base 的 POSIX 风格路径；允许 `../` 形式跨目录 */
 function toPosixRelative(baseDir: string, abs: string): string {
   try {
     let rel = path.relative(baseDir, abs);
-    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
-      // 不在文档目录下 → 用绝对路径，便于显示，但用 file:/// 形式更通用
-      return abs.replace(/\\/g, '/');
-    }
-    rel = rel.replace(/\\/g, '/');
-    return rel;
+    if (!rel) return '.';
+    // path.relative 在跨盘符时会返回绝对路径（如 Windows D:\ ↔ C:\）
+    if (path.isAbsolute(rel)) return abs.replace(/\\/g, '/');
+    return rel.replace(/\\/g, '/');
   } catch {
     return abs.replace(/\\/g, '/');
   }
