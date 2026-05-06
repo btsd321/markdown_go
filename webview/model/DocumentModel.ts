@@ -22,40 +22,60 @@ export class DocumentModel {
     const lines = normalized.split('\n');
     const newBlocks: Block[] = [];
 
-    let inCodeBlock = false;
-    let codeBlockType: 'latex' | 'mermaid' | null = null;
-    let codeBlockContent: string[] = [];
+    // 围栏类型：
+    //   - 'mermaid' → ```mermaid ... ```
+    //   - 'latex'   → $$ ... $$（独占一行）
+    type FenceKind = 'latex' | 'mermaid';
+    let fence: FenceKind | null = null;
+    let buf: string[] = [];
+
+    const flushFence = () => {
+      if (!fence) return;
+      newBlocks.push({
+        id: this.generateId(),
+        type: fence,
+        content: buf.join('\n'),
+      });
+      fence = null;
+      buf = [];
+    };
 
     for (const line of lines) {
-      // 检测代码块开始/结束
-      if (line.trim().startsWith('```')) {
-        if (!inCodeBlock) {
-          // 开始代码块
-          const lang = line.trim().slice(3).toLowerCase();
-          if (lang === 'latex' || lang === 'mermaid') {
-            inCodeBlock = true;
-            codeBlockType = lang;
-            codeBlockContent = [];
-            continue;
-          }
+      const trimmed = line.trim();
+
+      // 已在围栏内：判断是否到达对应的结束标记
+      if (fence === 'mermaid') {
+        if (trimmed.startsWith('```')) {
+          flushFence();
         } else {
-          // 结束代码块
-          if (codeBlockType) {
-            newBlocks.push({
-              id: this.generateId(),
-              type: codeBlockType,
-              content: codeBlockContent.join('\n'),
-            });
-          }
-          inCodeBlock = false;
-          codeBlockType = null;
-          codeBlockContent = [];
-          continue;
+          buf.push(line);
         }
+        continue;
+      }
+      if (fence === 'latex') {
+        if (trimmed === '$$') {
+          flushFence();
+        } else {
+          buf.push(line);
+        }
+        continue;
       }
 
-      if (inCodeBlock) {
-        codeBlockContent.push(line);
+      // 围栏开始：```mermaid
+      if (trimmed.startsWith('```')) {
+        const lang = trimmed.slice(3).toLowerCase();
+        if (lang === 'mermaid') {
+          fence = 'mermaid';
+          buf = [];
+          continue;
+        }
+        // 其他语言的代码块暂不特殊处理，按普通段落保留
+      }
+
+      // 围栏开始：$$（独占一行）
+      if (trimmed === '$$') {
+        fence = 'latex';
+        buf = [];
         continue;
       }
 
@@ -80,6 +100,9 @@ export class DocumentModel {
         content: line,
       });
     }
+
+    // 文件结尾仍处于未闭合围栏：把已收集内容作为该类型块保留
+    if (fence) flushFence();
 
     // 替换所有块
     this.blocks = newBlocks;
@@ -108,9 +131,10 @@ export class DocumentModel {
           lines.push(`### ${block.content}`);
           break;
         case 'latex':
-          lines.push('```latex');
+          // 主流（Pandoc / KaTeX / mdmath）写法：$$ ... $$ 围栏
+          lines.push('$$');
           for (const l of block.content.split('\n')) lines.push(l);
-          lines.push('```');
+          lines.push('$$');
           break;
         case 'mermaid':
           lines.push('```mermaid');

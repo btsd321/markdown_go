@@ -50,7 +50,7 @@ export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement 
   root.className = 'block';
   root.dataset.id = block.id;
   root.dataset.type = block.type;
-  const needsPreview = block.type === 'mermaid';
+  const needsPreview = block.type === 'mermaid' || block.type === 'latex';
   if (needsPreview) root.classList.add('has-preview');
 
   // 行首 + 按钮

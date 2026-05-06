@@ -200,6 +200,9 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'webview.css')
     );
+    const katexCssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'katex', 'katex.min.css')
+    );
 
     const nonce = this.getNonce();
 
@@ -208,7 +211,8 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https: data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https: data:; font-src ${webview.cspSource};">
+  <link href="${katexCssUri}" rel="stylesheet">
   <link href="${styleUri}" rel="stylesheet">
   <title>Markdown Go Editor</title>
 </head>

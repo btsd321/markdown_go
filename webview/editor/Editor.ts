@@ -24,6 +24,7 @@ import { History, HistorySnapshot } from './History';
 import { attachKeyHandler } from './KeyHandler';
 import { attachClipboard } from './Clipboard';
 import { renderMermaid } from '../render/MermaidRenderer';
+import { renderLatexBlock } from '../render/LatexRenderer';
 
 export interface EditorCallbacks {
   /** 文档（markdown）发生变化，需要同步到宿主 */
@@ -364,6 +365,15 @@ export class Editor {
     const previewEl = this.previewEls.get(blockId);
     const block = this.model.getBlock(blockId);
     if (!previewEl || !block) return;
+
+    if (block.type === 'latex') {
+      // KaTeX 是同步渲染，直接写入
+      const res = renderLatexBlock(block.content);
+      previewEl.classList.toggle('is-error', !res.ok);
+      previewEl.innerHTML = res.html;
+      return;
+    }
+
     if (block.type !== 'mermaid') return;
 
     const source = block.content;

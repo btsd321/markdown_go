@@ -10,9 +10,9 @@
 
 ## 代码块测试
 
-```latex
-E = mc^2
-```
+$$
+E = mc^{2} \quad \Rightarrow \quad \int_{0}^{\infty} e^{-x^{2}} \, dx = \frac{\sqrt{\pi}}{2}
+$$
 
 ```mermaid
 graph LR

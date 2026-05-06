@@ -156,6 +156,13 @@ body {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.9em;
 }
+/* KaTeX 块级公式：去掉默认外边距，沿用我们的 padding */
+.block-preview .katex-display {
+  margin: 0;
+}
+.block-preview .katex-display > .katex {
+  white-space: normal;
+}
 /* 默认：有预览的块 → 隐藏源码，显示预览 */
 .block.has-preview .block-content {
   display: none;
