@@ -15,7 +15,6 @@ import type { Editor } from '@tiptap/core';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { MarkdownParser } from 'prosemirror-markdown';
-import { Slice, Fragment } from '@tiptap/pm/model';
 
 export interface SmartPasteController {
   extension: Extension;
@@ -31,6 +30,8 @@ const RE_LATEX_BLOCK = /(^|\n)\s*\$\$[\s\S]*?\$\$\s*(\n|$)/;
 const RE_MERMAID_FENCE = /(^|\n)\s*```mermaid\b[\s\S]*?```/i;
 
 export function createSmartPaste(opts: SmartPasteOptions): SmartPasteController {
+  let editorRef: Editor | null = null;
+
   function shouldIntercept(text: string): boolean {
     if (!text) return false;
     return RE_LATEX_BLOCK.test(text) || RE_MERMAID_FENCE.test(text);
@@ -39,10 +40,10 @@ export function createSmartPaste(opts: SmartPasteOptions): SmartPasteController 
   const plugin = new Plugin({
     key: new PluginKey('mg-smart-paste'),
     props: {
-      handlePaste(view, event) {
+      handlePaste(_view, event) {
+        if (!editorRef) return false;
         const cd = (event as ClipboardEvent).clipboardData;
         if (!cd) return false;
-        // 若剪贴板有 HTML（来自富文本），ProseMirror 默认行为更合理，让它走默认
         const text = cd.getData('text/plain');
         if (!shouldIntercept(text)) return false;
 
@@ -52,16 +53,17 @@ export function createSmartPaste(opts: SmartPasteOptions): SmartPasteController 
         } catch {
           return false;
         }
-        if (!doc) return false;
+        if (!doc || doc.content.size === 0) return false;
 
-        // 提取顶层子节点作为 Fragment
-        const frag = Fragment.from(doc.content);
-        if (frag.size === 0) return false;
-
-        // openStart/openEnd = 0：插入完整块
-        const slice = new Slice(frag, 0, 0);
-        const tr = view.state.tr.replaceSelection(slice).scrollIntoView();
-        view.dispatch(tr);
+        // 交给 Tiptap insertContent 处理：在空 textblock 处会替换当前块，
+        // 避免 replaceSelection 把 heading/段落划分成两个空块
+        editorRef
+          .chain()
+          .focus()
+          .insertContent(doc.toJSON().content, {
+            parseOptions: { preserveWhitespace: 'full' },
+          })
+          .run();
         return true;
       },
     },
@@ -76,8 +78,8 @@ export function createSmartPaste(opts: SmartPasteOptions): SmartPasteController 
 
   return {
     extension,
-    bind(_editor: Editor) {
-      /* no-op */
+    bind(editor: Editor) {
+      editorRef = editor;
     },
   };
 }
