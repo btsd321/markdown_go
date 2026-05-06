@@ -316,6 +316,21 @@ export class Editor {
 
   private insertBlockAfter(blockId: string, item: InsertMenuItem): void {
     this.flushPendingSnapshot();
+
+    const current = this.model.getBlock(blockId);
+    // 当前块为空：直接转换类型，避免无谓地新增空行
+    if (current && current.content.length === 0) {
+      this.silentUpdate(blockId, {
+        type: item.type,
+        content: item.initial ?? '',
+      });
+      this.render();
+      this.focusBlock(blockId);
+      this.history.push(this.captureSnapshot());
+      this.scheduleSync();
+      return;
+    }
+
     const newBlock: Block = {
       id: '',
       type: item.type,
