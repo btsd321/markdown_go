@@ -1,0 +1,26 @@
+# 源码与开发资源
+src/**
+webview/**
+shared/**
+scripts/**
+test/**
+agent_docs/**
+.ref_project/**
+.claude/**
+.vscode/**
+.git/**
+.gitignore
+
+# TS 配置
+tsconfig*.json
+
+# 文档（保留 README / LICENSE / CHANGELOG）
+CLAUDE.MD
+
+# Source maps（体积大，发布版不需要）
+**/*.map
+**/*.ts
+
+# 包管理
+package-lock.json
+node_modules/**
