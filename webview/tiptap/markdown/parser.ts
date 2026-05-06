@@ -81,11 +81,61 @@ function mermaidRoutePlugin(md: any): void {
   });
 }
 
+/**
+ * 将 inline html_inline 的 <span style="color: ..."> ... </span> 成对
+ * 转成自定义 color_open/color_close token，供 MarkdownParser 映射为 textStyle mark。
+ * 仅识别符合 `style` 中 `color: <value>` 的 span，其他 html 保持原状。
+ */
+function colorSpanPlugin(md: any): void {
+  const SPAN_OPEN = /^<span\s+[^>]*style\s*=\s*"[^"]*color\s*:\s*([^";]+)[^"]*"[^>]*>$/i;
+  const SPAN_OPEN_SQ = /^<span\s+[^>]*style\s*=\s*'[^']*color\s*:\s*([^';]+)[^']*'[^>]*>$/i;
+  const SPAN_CLOSE = /^<\/span>$/i;
+  md.core.ruler.after('inline', 'color_span', (state: any) => {
+    for (const blk of state.tokens) {
+      if (blk.type !== 'inline' || !blk.children) continue;
+      const stack: number[] = [];
+      for (let i = 0; i < blk.children.length; i++) {
+        const t = blk.children[i];
+        if (t.type !== 'html_inline') continue;
+        const m = SPAN_OPEN.exec(t.content) || SPAN_OPEN_SQ.exec(t.content);
+        if (m) {
+          t.type = 'color_open';
+          t.tag = 'span';
+          t.nesting = 1;
+          t.attrs = [['color', m[1].trim()]];
+          stack.push(i);
+          continue;
+        }
+        if (SPAN_CLOSE.test(t.content) && stack.length) {
+          t.type = 'color_close';
+          t.tag = 'span';
+          t.nesting = -1;
+          t.attrs = null;
+          stack.pop();
+        }
+      }
+      // 剩余未识别的 html_inline 转为纯文本，避免 PM 解析报 "Token type not supported"
+      for (const t of blk.children) {
+        if (t.type === 'html_inline') {
+          t.type = 'text';
+          t.tag = '';
+          t.nesting = 0;
+        }
+      }
+    }
+    return true;
+  });
+}
+
 export function buildMarkdownParser(schema: Schema): MarkdownParser {
-  const md = new MarkdownIt('commonmark', { html: false });
+  // 启用 inline html，供 color_span 插件识别 <span style="color:...">
+  const md = new MarkdownIt('commonmark', { html: true });
   md.enable(['strikethrough']);
+  // 禁用块级 html 解析，避免 html_block token 进入 schema（无对应节点）
+  try { md.disable(['html_block']); } catch { /* ignore */ }
   md.use(mathBlockPlugin);
   md.use(mermaidRoutePlugin);
+  md.use(colorSpanPlugin);
 
   // 完整 token-spec；运行时若 schema 中无对应节点/mark，会被剔除
   const allTokens: Record<string, any> = {
@@ -127,6 +177,10 @@ export function buildMarkdownParser(schema: Schema): MarkdownParser {
         href: tok.attrGet('href'),
         title: tok.attrGet('title') || null,
       }),
+    },
+    color: {
+      mark: 'textStyle',
+      getAttrs: (tok: any) => ({ color: tok.attrGet('color') }),
     },
   };
 

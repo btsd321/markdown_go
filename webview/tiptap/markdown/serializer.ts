@@ -95,6 +95,15 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
       mixable: true,
       expelEnclosingWhitespace: true,
     },
+    // 文本颜色：textStyle 携带 color 属性 → 写为内联 HTML <span>
+    // 没有 color 属性的 textStyle 标记不输出任何包裹符号
+    textStyle: {
+      open: (_state: any, mark: any) =>
+        mark.attrs.color ? `<span style="color: ${mark.attrs.color}">` : '',
+      close: (_state: any, mark: any) => (mark.attrs.color ? '</span>' : ''),
+      mixable: true,
+      expelEnclosingWhitespace: true,
+    },
   };
   for (const k of Object.keys(marks)) {
     if (!schema.marks[k]) delete marks[k];

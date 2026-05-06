@@ -167,7 +167,23 @@ export function createBubbleMenu(): BubbleMenuFactory {
   const inlineWrap = document.createElement('div');
   inlineWrap.className = 'bubble-group bubble-group-inline';
 
-  element.append(typeWrap, inlineWrap);
+  // 颜色组：调色按钮 + 弹出色板
+  const colorWrap = document.createElement('div');
+  colorWrap.className = 'bubble-group bubble-group-color';
+  const colorBtn = document.createElement('button');
+  colorBtn.type = 'button';
+  colorBtn.className = 'bubble-btn bubble-color-btn';
+  colorBtn.title = t('bubble.colorTitle');
+  colorBtn.innerHTML =
+    `<span class="bubble-color-letter">A</span>` +
+    `<span class="bubble-color-bar"></span>` +
+    `<span class="bubble-caret">▾</span>`;
+  const colorPanel = document.createElement('div');
+  colorPanel.className = 'bubble-color-panel';
+  colorPanel.style.display = 'none';
+  colorWrap.append(colorBtn, colorPanel);
+
+  element.append(typeWrap, inlineWrap, colorWrap);
   document.body.appendChild(element);
 
   const typeItemEls: { item: BlockTypeItem; el: HTMLElement }[] = [];
@@ -192,6 +208,91 @@ export function createBubbleMenu(): BubbleMenuFactory {
     e.stopPropagation();
     if (typeMenuOpen) closeTypeMenu();
     else openTypeMenu();
+  });
+
+  // ===== 颜色面板 =====
+  const COLOR_SWATCHES: { name: string; value: string | null }[] = [
+    { name: 'default', value: null },
+    { name: 'red', value: '#e03131' },
+    { name: 'orange', value: '#f08c00' },
+    { name: 'yellow', value: '#f59f00' },
+    { name: 'green', value: '#2f9e44' },
+    { name: 'teal', value: '#0ca678' },
+    { name: 'blue', value: '#1971c2' },
+    { name: 'indigo', value: '#4263eb' },
+    { name: 'violet', value: '#7048e8' },
+    { name: 'pink', value: '#d6336c' },
+    { name: 'gray', value: '#868e96' },
+    { name: 'black', value: '#000000' },
+  ];
+  let colorPanelOpen = false;
+  const closeColorPanel = () => {
+    colorPanelOpen = false;
+    colorPanel.style.display = 'none';
+  };
+  function buildColorPanel() {
+    if (!editorRef) return;
+    colorPanel.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'bubble-color-grid';
+    for (const sw of COLOR_SWATCHES) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'bubble-color-swatch';
+      if (sw.value) {
+        el.style.background = sw.value;
+        el.title = sw.value;
+      } else {
+        el.classList.add('is-default');
+        el.title = t('bubble.colorClear');
+      }
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!editorRef) return;
+        if (sw.value) {
+          editorRef.chain().focus().setColor(sw.value).run();
+        } else {
+          editorRef.chain().focus().unsetColor().run();
+        }
+        closeColorPanel();
+        refreshActive();
+      });
+      grid.appendChild(el);
+    }
+    colorPanel.appendChild(grid);
+
+    // 自定义颜色（原生 color input）
+    const customRow = document.createElement('div');
+    customRow.className = 'bubble-color-custom';
+    const labelEl = document.createElement('label');
+    labelEl.textContent = t('bubble.colorCustom');
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.className = 'bubble-color-input';
+    const cur = editorRef.getAttributes('textStyle')?.color;
+    if (cur && /^#[0-9a-f]{6}$/i.test(cur)) colorInput.value = cur;
+    colorInput.addEventListener('input', () => {
+      if (!editorRef) return;
+      editorRef.chain().focus().setColor(colorInput.value).run();
+      refreshActive();
+    });
+    // 阻止 mousedown 冒泡导致面板关闭
+    colorInput.addEventListener('mousedown', (e) => e.stopPropagation());
+    customRow.append(labelEl, colorInput);
+    colorPanel.appendChild(customRow);
+  }
+  colorBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (colorPanelOpen) {
+      closeColorPanel();
+      return;
+    }
+    closeTypeMenu();
+    buildColorPanel();
+    colorPanelOpen = true;
+    colorPanel.style.display = '';
   });
 
   function buildItems(editor: Editor) {
@@ -250,6 +351,10 @@ export function createBubbleMenu(): BubbleMenuFactory {
     for (const { item, el } of inlineItemEls) {
       el.classList.toggle('is-active', item.isActive(editorRef));
     }
+    // 同步颜色指示条
+    const cur = editorRef.getAttributes('textStyle')?.color;
+    const bar = colorBtn.querySelector('.bubble-color-bar') as HTMLElement | null;
+    if (bar) bar.style.background = cur || 'transparent';
   }
 
   /**
@@ -314,6 +419,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
     if (!visible) return;
     visible = false;
     closeTypeMenu();
+    closeColorPanel();
     element.style.display = 'none';
   }
 

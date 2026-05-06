@@ -42,6 +42,9 @@ const ZH: Dict = {
   'block.mergeUL': '合并为无序列表（单项）',
   'block.mergeOL': '合并为有序列表（单项）',
   'block.mergeCode': '合并为代码块',
+  'bubble.colorTitle': '文本颜色',
+  'bubble.colorClear': '默认颜色',
+  'bubble.colorCustom': '自定义：',
 
   // BubbleMenu 内联按钮 title
   'inline.bold': '加粗',
@@ -106,6 +109,9 @@ const EN: Dict = {
   'block.mergeUL': 'Merge into Bullet List (single item)',
   'block.mergeOL': 'Merge into Ordered List (single item)',
   'block.mergeCode': 'Merge into Code Block',
+  'bubble.colorTitle': 'Text Color',
+  'bubble.colorClear': 'Default Color',
+  'bubble.colorCustom': 'Custom:',
 
   'inline.bold': 'Bold',
   'inline.italic': 'Italic',

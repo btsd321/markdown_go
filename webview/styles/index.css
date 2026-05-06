@@ -386,6 +386,80 @@ body {
   background: var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
 }
 
+/* ---- 颜色按钮 + 色板 ---- */
+.bubble-color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+.bubble-color-letter {
+  font-weight: 600;
+}
+.bubble-color-bar {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  border-radius: 1px;
+  background: transparent;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
+}
+.bubble-color-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  padding: 6px;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 1600;
+  min-width: 168px;
+}
+.bubble-color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.bubble-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.bubble-color-swatch:hover {
+  outline: 2px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+.bubble-color-swatch.is-default {
+  background: linear-gradient(
+    135deg,
+    transparent calc(50% - 1px),
+    var(--vscode-errorForeground, #e51400) 50%,
+    transparent calc(50% + 1px)
+  );
+}
+.bubble-color-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.bubble-color-input {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
+  background: transparent;
+  cursor: pointer;
+}
+
 /* ========== SlashMenu（输入触发的浮动菜单） ========== */
 .slash-menu {
   position: fixed;
