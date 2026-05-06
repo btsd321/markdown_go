@@ -23,6 +23,7 @@ import {
 import { History, HistorySnapshot } from './History';
 import { attachKeyHandler } from './KeyHandler';
 import { attachClipboard } from './Clipboard';
+import { renderMermaid } from '../render/MermaidRenderer';
 
 export interface EditorCallbacks {
   /** 文档（markdown）发生变化，需要同步到宿主 */
@@ -35,6 +36,9 @@ export class Editor {
   private activeBlockId: string | null = null;
   private blockEls = new Map<string, HTMLElement>();
   private contentEls = new Map<string, HTMLElement>();
+  private previewEls = new Map<string, HTMLElement>();
+  /** mermaid 块内容缓存：避免相同源码重复渲染 */
+  private mermaidRendered = new Map<string, string>();
   private openPopup: HTMLElement | null = null;
   private suppressSync = false;
   private history = new History(100);
@@ -87,10 +91,11 @@ export class Editor {
     this.host.innerHTML = '';
     this.blockEls.clear();
     this.contentEls.clear();
+    this.previewEls.clear();
 
     const blocks = this.model.getAllBlocks();
     for (const b of blocks) {
-      const { root, content } = renderBlock(b, {
+      const { root, content, preview } = renderBlock(b, {
         onFocus: (id) => this.setActive(id),
         onInput: (id, text) => this.handleInput(id, text),
         onHandleClick: (id, anchor) => this.openInsertMenu(id, anchor),
@@ -98,6 +103,7 @@ export class Editor {
       });
       this.blockEls.set(b.id, root);
       this.contentEls.set(b.id, content);
+      if (preview) this.previewEls.set(b.id, preview);
       this.host.appendChild(root);
     }
 
@@ -105,6 +111,7 @@ export class Editor {
       this.activeBlockId = blocks[0].id;
     }
     this.applyActiveClass();
+    this.refreshAllPreviews();
   }
 
   private setActive(id: string): void {
@@ -112,8 +119,13 @@ export class Editor {
       this.applyActiveClass();
       return;
     }
+    const prev = this.activeBlockId;
     this.activeBlockId = id;
     this.applyActiveClass();
+    // 离开 mermaid 块 → 触发预览刷新
+    if (prev && this.previewEls.has(prev)) {
+      this.refreshPreview(prev);
+    }
   }
 
   private applyActiveClass(): void {
@@ -341,5 +353,38 @@ export class Editor {
     this.focusBlock(newBlock.id);
     this.history.push(this.captureSnapshot());
     this.scheduleSync();
+  }
+
+  // ============ 预览（mermaid 等） ============
+  private refreshAllPreviews(): void {
+    this.previewEls.forEach((_el, id) => this.refreshPreview(id));
+  }
+
+  private refreshPreview(blockId: string): void {
+    const previewEl = this.previewEls.get(blockId);
+    const block = this.model.getBlock(blockId);
+    if (!previewEl || !block) return;
+    if (block.type !== 'mermaid') return;
+
+    const source = block.content;
+    if (this.mermaidRendered.get(blockId) === source && previewEl.innerHTML) {
+      return; // 内容未变 & 已渲染过
+    }
+
+    previewEl.classList.remove('is-error');
+    previewEl.textContent = '渲染中…';
+
+    renderMermaid(source).then((res) => {
+      // 异步回来时块可能已被删除/改类型
+      const cur = this.model.getBlock(blockId);
+      if (!cur || cur.type !== 'mermaid' || cur.content !== source) return;
+      if (res.ok) {
+        previewEl.innerHTML = res.svg;
+        this.mermaidRendered.set(blockId, source);
+      } else {
+        previewEl.classList.add('is-error');
+        previewEl.textContent = `Mermaid 渲染失败：${res.message}`;
+      }
+    });
   }
 }

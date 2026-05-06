@@ -134,6 +134,43 @@ body {
   font-size: 0.95em;
 }
 
+/* 预览容器（mermaid 等）：当块未激活时显示渲染结果 */
+.block-preview {
+  flex: 1;
+  min-height: 1.4em;
+  padding: 8px 10px;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.05));
+  cursor: text;
+  overflow-x: auto;
+}
+.block-preview svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.block-preview.is-error {
+  color: var(--vscode-errorForeground, #f14c4c);
+  white-space: pre-wrap;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+}
+/* 默认：有预览的块 → 隐藏源码，显示预览 */
+.block.has-preview .block-content {
+  display: none;
+}
+.block.has-preview .block-preview {
+  display: block;
+}
+/* 激活态：显示源码，隐藏预览 */
+.block.has-preview.is-active .block-content {
+  display: block;
+}
+.block.has-preview.is-active .block-preview {
+  display: none;
+}
+
 /* ========== 弹出菜单 ========== */
 .popup-menu {
   position: absolute;

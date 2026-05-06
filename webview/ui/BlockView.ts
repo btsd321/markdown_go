@@ -6,6 +6,25 @@
  */
 import { Block } from '../../shared';
 
+/** 行首按钮显示的标签：根据块类型变化 */
+function handleLabelOf(type: Block['type']): string {
+  switch (type) {
+    case 'heading-1':
+      return 'H1';
+    case 'heading-2':
+      return 'H2';
+    case 'heading-3':
+      return 'H3';
+    case 'latex':
+      return 'fx';
+    case 'mermaid':
+      return 'M';
+    case 'paragraph':
+    default:
+      return '+';
+  }
+}
+
 export interface BlockViewCallbacks {
   onFocus(blockId: string): void;
   /** 内容文本变化（contenteditable input 事件） */
@@ -22,6 +41,8 @@ export interface BlockViewCallbacks {
 export interface BlockElement {
   root: HTMLElement;
   content: HTMLElement;
+  /** 渲染预览容器（仅对 mermaid/latex 等需要预览的块存在） */
+  preview?: HTMLElement;
 }
 
 export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement {
@@ -29,13 +50,15 @@ export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement 
   root.className = 'block';
   root.dataset.id = block.id;
   root.dataset.type = block.type;
+  const needsPreview = block.type === 'mermaid';
+  if (needsPreview) root.classList.add('has-preview');
 
   // 行首 + 按钮
   const handle = document.createElement('button');
   handle.className = 'block-handle';
   handle.type = 'button';
   handle.title = '插入块';
-  handle.textContent = '+';
+  handle.textContent = handleLabelOf(block.type);
   handle.addEventListener('mousedown', (e) => e.preventDefault()); // 不抢焦点
   handle.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -58,5 +81,17 @@ export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement 
   cb.attachContentListeners(block.id, content);
 
   root.appendChild(content);
-  return { root, content };
+
+  let preview: HTMLElement | undefined;
+  if (needsPreview) {
+    preview = document.createElement('div');
+    preview.className = 'block-preview';
+    // 点击预览 → 进入编辑（聚焦源码）
+    preview.addEventListener('click', () => {
+      content.focus();
+    });
+    root.appendChild(preview);
+  }
+
+  return { root, content, preview };
 }
