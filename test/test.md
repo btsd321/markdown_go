@@ -24,7 +24,7 @@ graph LR
 
 <div align="center">
 
-![测试图片](../assets/imgs/markdown%20go.png)
+![测试图片](../assets/imgs/markdown-go.png)
 
 </div>
 

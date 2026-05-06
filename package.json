@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/btsd321/markdown_go/issues"
   },
-  "icon": "assets/imgs/markdown go.png",
+  "icon": "assets/imgs/markdown-go.png",
   "engines": {
     "vscode": "^1.85.0"
   },
