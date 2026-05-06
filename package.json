@@ -19,8 +19,12 @@
         "viewType": "markdownGo.editor",
         "displayName": "Markdown Go Editor",
         "selector": [
-          { "filenamePattern": "*.md" },
-          { "filenamePattern": "*.MD" }
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.MD"
+          }
         ],
         "priority": "option"
       }
@@ -47,13 +51,20 @@
       "properties": {
         "markdownGo.language": {
           "type": "string",
-          "enum": ["zh-cn", "en"],
+          "enum": [
+            "zh-cn",
+            "en"
+          ],
           "default": "zh-cn",
           "description": "Editor UI language"
         },
         "markdownGo.defaultMode": {
           "type": "string",
-          "enum": ["edit", "preview", "plain"],
+          "enum": [
+            "edit",
+            "preview",
+            "plain"
+          ],
           "default": "edit",
           "description": "Default display mode when opening a document"
         },
@@ -68,8 +79,15 @@
           "markdownDescription": "Override editor key bindings. Keys are command IDs, values are chord strings (e.g. `\"Ctrl+Shift+Z\"`) or arrays. Use modifiers `Ctrl`/`Cmd`/`Shift`/`Alt`, or `Mod` for cross-platform main modifier (Mac→Cmd, others→Ctrl). Set value to `\"\"` to unbind a default.\n\nAvailable command IDs:\n- `editor.undo`\n- `editor.redo`\n- `editor.enter`\n- `editor.softLineBreak`\n- `editor.backspaceAtStart`\n- `editor.indent`\n- `editor.outdent`\n\nExample:\n```json\n\"markdownGo.keybindings\": {\n  \"editor.indent\": \"Tab\",\n  \"editor.redo\": [\"Mod+Y\", \"Mod+Shift+Z\"]\n}\n```",
           "additionalProperties": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "array", "items": { "type": "string" } }
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             ]
           }
         }
@@ -83,15 +101,19 @@
     "typecheck": "tsc --noEmit -p tsconfig.extension.json && tsc --noEmit -p tsconfig.webview.json"
   },
   "devDependencies": {
-    "@types/markdown-it": "^13.0.7",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.20.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@tiptap/core": "^2.27.2",
+    "@tiptap/extension-bubble-menu": "^2.27.2",
+    "@tiptap/pm": "^2.27.2",
+    "@tiptap/starter-kit": "^2.27.2",
     "katex": "^0.16.9",
-    "markdown-it": "^14.0.0",
-    "mermaid": "^10.6.1"
+    "mermaid": "^10.6.1",
+    "prosemirror-markdown": "^1.13.4"
   }
 }

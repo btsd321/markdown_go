@@ -47,31 +47,7 @@ export type DisplayMode = 'edit' | 'preview' | 'plain';
 export type LanguageCode = 'zh-cn' | 'en';
 
 /**
- * 块类型
- */
-export type BlockType =
-  | 'paragraph'
-  | 'heading-1'
-  | 'heading-2'
-  | 'heading-3'
-  | 'list-unordered'
-  | 'list-ordered'
-  | 'latex'
-  | 'mermaid'
-  | 'code';
-
-/**
- * 文档块
- */
-export interface Block {
-  id: string;
-  type: BlockType;
-  content: string;
-  meta?: Record<string, any>;
-}
-
-/**
- * 文档编辑操作
+ * 文档编辑操作（webview → extension）
  */
 export interface DocumentEdit {
   range: {

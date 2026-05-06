@@ -78,9 +78,10 @@ markdown-go/
 - TypeScript
 - VSCode Extension API
 - esbuild
-- markdown-it
-- KaTeX
-- Mermaid
+- Tiptap (基于 ProseMirror) — 编辑器内核 / Schema / 跨块选区 / 撤销重做
+- prosemirror-markdown — Markdown ↔ 文档双向序列化
+- KaTeX — LaTeX 公式
+- Mermaid — 流程图
 
 ## 许可证
 

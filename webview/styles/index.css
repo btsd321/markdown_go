@@ -60,230 +60,109 @@ body {
   padding: 0 8px;
 }
 
-.block {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  padding: 4px 0;
-  margin-bottom: 2px;
-  border-left: 2px solid transparent;
-  padding-left: 36px;
-}
-
-.block.is-active {
-  border-left-color: var(--vscode-focusBorder);
-}
-
-/* 行首按钮：默认隐藏，仅当前活动块显示 */
-.block-handle {
-  position: absolute;
-  left: 4px;
-  top: 4px;
-  width: 22px;
-  height: 22px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: var(--vscode-descriptionForeground);
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 16px;
-  line-height: 1;
-  user-select: none;
-}
-
-.block.is-active .block-handle {
-  display: inline-flex;
-}
-
-.block-handle:hover {
-  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
-  color: var(--vscode-foreground);
-}
-
-.block-content {
-  flex: 1;
-  min-height: 1.4em;
+/* Tiptap 编辑区域 */
+.tiptap-host .ProseMirror {
   outline: none;
+  min-height: 60vh;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
 }
 
-/* 不同块类型样式 */
-.block[data-type='heading-1'] .block-content {
+.tiptap-host .ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+
+.tiptap-host .ProseMirror h1 {
   font-size: 1.8em;
   font-weight: 600;
+  line-height: 1.3;
 }
-.block[data-type='heading-2'] .block-content {
+.tiptap-host .ProseMirror h2 {
   font-size: 1.5em;
   font-weight: 600;
+  line-height: 1.3;
 }
-.block[data-type='heading-3'] .block-content {
+.tiptap-host .ProseMirror h3 {
   font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.tiptap-host .ProseMirror h4,
+.tiptap-host .ProseMirror h5,
+.tiptap-host .ProseMirror h6 {
   font-weight: 600;
 }
 
-/* 列表块：在内容前显示 data-marker（"•" 或 "1."） */
-.block[data-type='list-unordered'],
-.block[data-type='list-ordered'] {
-  align-items: flex-start;
-}
-.block[data-type='list-unordered'] .block-content,
-.block[data-type='list-ordered'] .block-content {
-  position: relative;
+.tiptap-host .ProseMirror ul,
+.tiptap-host .ProseMirror ol {
   padding-left: 1.6em;
 }
-.block[data-type='list-unordered'] .block-content::before,
-.block[data-type='list-ordered'] .block-content::before {
-  content: attr(data-marker);
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1.4em;
-  color: var(--vscode-descriptionForeground);
-  user-select: none;
+
+.tiptap-host .ProseMirror blockquote {
+  border-left: 3px solid var(--vscode-textBlockQuote-border, var(--vscode-panel-border));
+  padding-left: 12px;
+  color: var(--vscode-textBlockQuote-foreground, var(--vscode-descriptionForeground));
 }
-.block[data-type='latex'] .block-content,
-.block[data-type='mermaid'] .block-content,
-.block[data-type='code'] .block-content {
+
+.tiptap-host .ProseMirror code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.95em;
+}
+
+.tiptap-host .ProseMirror pre {
   font-family: var(--vscode-editor-font-family, monospace);
   background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
   padding: 8px 10px;
   border-radius: 3px;
-  font-size: 0.95em;
-}
-
-/* 代码块预览：等宽、保留空白 */
-.block-preview pre.code-block {
-  margin: 0;
-  font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 0.95em;
-  white-space: pre;
   overflow-x: auto;
+  white-space: pre;
+}
+.tiptap-host .ProseMirror pre code {
+  background: transparent;
+  padding: 0;
 }
 
-/* 预览容器（mermaid 等）：当块未激活时显示渲染结果 */
-.block-preview {
-  flex: 1;
-  min-height: 1.4em;
+.tiptap-host .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--vscode-panel-border);
+  margin: 1em 0;
+}
+
+/* 自定义 atom 节点：latex / mermaid */
+.tiptap-host .mg-fenced {
   padding: 8px 10px;
   border-radius: 3px;
   background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.05));
   cursor: text;
   overflow-x: auto;
 }
-.block-preview svg {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-}
-.block-preview.is-error {
+.tiptap-host .mg-fenced.is-error {
   color: var(--vscode-errorForeground, #f14c4c);
   white-space: pre-wrap;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.9em;
 }
-/* KaTeX 块级公式：去掉默认外边距，沿用我们的 padding */
-.block-preview .katex-display {
+.tiptap-host .mg-fenced svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.tiptap-host .mg-latex .katex-display {
   margin: 0;
 }
-.block-preview .katex-display > .katex {
+.tiptap-host .mg-latex .katex-display > .katex {
   white-space: normal;
 }
-/* 默认：有预览的块 → 隐藏源码，显示预览 */
-.block.has-preview .block-content {
-  display: none;
-}
-.block.has-preview .block-preview {
-  display: block;
-}
-/* 编辑态：显示源码，隐藏预览（双击预览进入；Enter 退出） */
-.block.has-preview.is-editing .block-content {
-  display: block;
-}
-.block.has-preview.is-editing .block-preview {
-  display: none;
-}
 
-/* ========== 弹出菜单 ========== */
-.popup-menu {
-  position: absolute;
-  z-index: 1000;
-  min-width: 200px;
-  background: var(--vscode-menu-background, var(--vscode-editor-background));
-  color: var(--vscode-menu-foreground, var(--vscode-foreground));
-  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 4px;
-}
-
-.popup-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.popup-menu-item:hover {
-  background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
-  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
-}
-
-.popup-menu-sep {
-  height: 1px;
-  background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
-  margin: 4px 0;
-}
-
-/* ========== 多块选区浮动工具栏 ========== */
-.selection-toolbar {
-  position: fixed;
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: var(--vscode-menu-background, var(--vscode-editor-background));
-  color: var(--vscode-menu-foreground, var(--vscode-foreground));
-  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
-  border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  user-select: none;
-}
-.selection-toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 26px;
-  padding: 0 6px;
-  background: transparent;
-  color: inherit;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.95em;
-  font-family: inherit;
-}
-.selection-toolbar-btn:hover:not(.is-disabled):not([disabled]) {
-  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
-}
-.selection-toolbar-btn.is-disabled,
-.selection-toolbar-btn[disabled] {
-  opacity: 0.4;
-  cursor: default;
-}
-.selection-toolbar-menu {
-  position: fixed;
-  z-index: 1101;
+/* ProseMirror 选中态 */
+.tiptap-host .ProseMirror-selectednode {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
 }
 
 /* ========== 模态对话框 ========== */
