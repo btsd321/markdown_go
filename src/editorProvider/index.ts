@@ -9,6 +9,7 @@ import {
   DisplayMode,
   LanguageCode,
 } from '../../shared';
+import { logger } from '../log/logger';
 
 export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider {
   private static readonly viewType = 'markdownGo.editor';
@@ -64,25 +65,29 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
             break;
 
           case MessageType.MODE_CHANGE:
-            // 模式切换（可选：持久化到配置）
             const modePayload = message.payload as ModeChangePayload;
-            console.log('Mode changed to:', modePayload.mode);
+            logger.debug(`Mode changed to: ${modePayload.mode}`);
             break;
 
           case MessageType.LANG_CHANGE:
-            // 语言切换（可选：持久化到配置）
             const langPayload = message.payload as LangChangePayload;
             await vscode.workspace
               .getConfiguration('markdownGo')
               .update('language', langPayload.language, vscode.ConfigurationTarget.Global);
             break;
 
-          case MessageType.LOG:
-            console.log('[Webview]', message.payload.message, message.payload.data);
+          case MessageType.LOG: {
+            const { level, message: logMsg, data } = message.payload;
+            const suffix = data !== undefined ? ` ${JSON.stringify(data)}` : '';
+            const line = `[Webview] ${logMsg}${suffix}`;
+            if (level === 'warn') logger.warn(line);
+            else if (level === 'error') logger.error(line);
+            else logger.info(line);
             break;
+          }
 
           case MessageType.ERROR:
-            console.error('[Webview Error]', message.payload.message, message.payload.stack);
+            logger.error(`[Webview] ${message.payload.message}${message.payload.stack ? `\n${message.payload.stack}` : ''}`);
             break;
         }
       }

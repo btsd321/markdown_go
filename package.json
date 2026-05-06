@@ -1,7 +1,7 @@
 {
   "name": "markdown-go",
   "displayName": "Markdown Go",
-  "description": "%ext.description%",
+  "description": "WYSIWYG Markdown editor for beginners",
   "version": "0.0.1",
   "publisher": "markdown-go",
   "engines": {
@@ -11,13 +11,12 @@
     "Other"
   ],
   "main": "./dist/extension.js",
-  "l10n": "./l10n",
   "activationEvents": [],
   "contributes": {
     "customEditors": [
       {
         "viewType": "markdownGo.editor",
-        "displayName": "%editor.displayName%",
+        "displayName": "Markdown Go Editor",
         "selector": [
           { "filenamePattern": "*.md" },
           { "filenamePattern": "*.MD" }
@@ -28,17 +27,17 @@
     "commands": [
       {
         "command": "markdownGo.openWith",
-        "title": "%command.openWith.title%",
+        "title": "Open with Markdown Go",
         "category": "Markdown Go"
       },
       {
         "command": "markdownGo.switchMode",
-        "title": "%command.switchMode.title%",
+        "title": "Switch Mode",
         "category": "Markdown Go"
       },
       {
         "command": "markdownGo.switchLanguage",
-        "title": "%command.switchLanguage.title%",
+        "title": "Switch Language",
         "category": "Markdown Go"
       }
     ],
@@ -49,18 +48,18 @@
           "type": "string",
           "enum": ["zh-cn", "en"],
           "default": "zh-cn",
-          "description": "%config.language.description%"
+          "description": "Editor UI language"
         },
         "markdownGo.defaultMode": {
           "type": "string",
           "enum": ["edit", "preview", "plain"],
           "default": "edit",
-          "description": "%config.defaultMode.description%"
+          "description": "Default display mode when opening a document"
         },
         "markdownGo.slashTrigger": {
           "type": "string",
           "default": "/",
-          "description": "%config.slashTrigger.description%"
+          "description": "Character that triggers the slash menu"
         }
       }
     }
