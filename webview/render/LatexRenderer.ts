@@ -29,7 +29,7 @@ export function renderLatexBlock(source: string): RenderResult {
     });
     return { ok: true, html };
   } catch (err: any) {
-    const msg = (err?.message ?? String(err)).replace(/[<>&]/g, (c) =>
+    const msg = (err?.message ?? String(err)).replace(/[<>&]/g, (c: string) =>
       c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;'
     );
     return { ok: false, html: `LaTeX 错误：${msg}` };

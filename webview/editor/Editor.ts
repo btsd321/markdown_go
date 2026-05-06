@@ -6,7 +6,7 @@
  *  - 协调键盘 / 剪贴板 / 历史 / 插入菜单等子模块
  *  - 通过 onSync 回调把 markdown 变化抛给宿主 (Extension)
  */
-import { Block, BlockType } from '../../shared';
+import { Block } from '../../shared';
 import { DocumentModel } from '../model/DocumentModel';
 import { renderBlock } from '../ui/BlockView';
 import {
@@ -23,6 +23,7 @@ import {
 } from './Selection';
 import { History, HistorySnapshot } from './History';
 import { attachKeyHandler } from './KeyHandler';
+import { Keybindings, KeybindingOverrides } from './Keybindings';
 import { attachClipboard } from './Clipboard';
 import { renderMermaid } from '../render/MermaidRenderer';
 import { renderLatexBlock } from '../render/LatexRenderer';
@@ -49,6 +50,8 @@ export class Editor {
   private snapshotTimer: number | null = null;
   /** 最近一次 sync 给宿主的内容；用于识别回环 DOC_SYNC */
   private lastSentMarkdown: string | null = null;
+  /** 快捷键表；可通过 setKeybindings() 运行时更新 */
+  private keybindings = new Keybindings();
 
   constructor(
     private readonly host: HTMLElement,
@@ -70,6 +73,11 @@ export class Editor {
     this.suppressSync = false;
     this.render();
     this.history.reset(this.captureSnapshot());
+  }
+
+  /** 注入用户自定义快捷键覆盖。下次 keydown 即生效，无需重渲染。 */
+  setKeybindings(overrides: KeybindingOverrides): void {
+    this.keybindings = new Keybindings(undefined, overrides);
   }
 
   /** 外部强制设置内容（如外部修改了文件） */
@@ -193,11 +201,16 @@ export class Editor {
       () => isCaretAtStart(content),
       () => (content.textContent || '').length === 0,
       {
-        enterAfter: (blockId) => this.enterAfter(blockId),
-        softLineBreak: (blockId) => this.softLineBreak(blockId),
-        backspaceAtStart: (blockId) => this.backspaceAtStart(blockId),
-        undo: () => this.undo(),
-        redo: () => this.redo(),
+        keybindings: this.keybindings,
+        handlers: {
+          'editor.enter': (blockId: string) => this.enterAfter(blockId),
+          'editor.softLineBreak': (blockId: string) => this.softLineBreak(blockId),
+          'editor.backspaceAtStart': (blockId: string) => this.backspaceAtStart(blockId),
+          'editor.indent': (blockId: string) => this.insertTab(blockId),
+          'editor.outdent': (blockId: string) => this.outdent(blockId),
+          'editor.undo': () => this.undo(),
+          'editor.redo': () => this.redo(),
+        },
       }
     );
 
@@ -323,6 +336,62 @@ export class Editor {
     const next = text.slice(0, offset) + '\n' + text.slice(offset);
     el.textContent = next;
     setCaretOffset(el, offset + 1);
+    this.silentUpdate(blockId, { content: next });
+    this.scheduleSnapshot();
+    this.scheduleSync();
+  }
+
+  /** Tab 键：在光标处插入 2 个空格（与 Markdown 缩进约定一致） */
+  private insertTab(blockId: string): void {
+    const el = this.contentEls.get(blockId);
+    if (!el) return;
+    const TAB = '  ';
+    const offset = getCaretOffset(el);
+    const text = el.textContent || '';
+    const next = text.slice(0, offset) + TAB + text.slice(offset);
+    el.textContent = next;
+    setCaretOffset(el, offset + TAB.length);
+    this.silentUpdate(blockId, { content: next });
+    this.scheduleSnapshot();
+    this.scheduleSync();
+  }
+
+  /**
+   * Shift+Tab 反向缩进：删除当前光标所在行行首的 1~2 个空格或 1 个 Tab。
+   * 设计与主流编辑器一致：不要求选区，始终作用于“光标所在软行”。
+   */
+  private outdent(blockId: string): void {
+    const el = this.contentEls.get(blockId);
+    if (!el) return;
+    const TAB_WIDTH = 2;
+    const offset = getCaretOffset(el);
+    const text = el.textContent || '';
+
+    // 定位当前软行的起始偏移（上一个 \n 之后）
+    const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
+
+    // 计算要删几个空白字符：优先吃掉 1 个 Tab，其次最多 TAB_WIDTH 个空格
+    let removeLen = 0;
+    if (text[lineStart] === '\t') {
+      removeLen = 1;
+    } else {
+      while (
+        removeLen < TAB_WIDTH &&
+        text[lineStart + removeLen] === ' '
+      ) {
+        removeLen++;
+      }
+    }
+    if (removeLen === 0) return;
+
+    const next = text.slice(0, lineStart) + text.slice(lineStart + removeLen);
+    el.textContent = next;
+    // 保持光标相对位置：如果光标原本在被删区间中，裁到行首
+    const newOffset =
+      offset <= lineStart + removeLen
+        ? Math.max(lineStart, offset - (offset - lineStart))
+        : offset - removeLen;
+    setCaretOffset(el, newOffset);
     this.silentUpdate(blockId, { content: next });
     this.scheduleSnapshot();
     this.scheduleSync();

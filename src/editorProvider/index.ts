@@ -123,10 +123,20 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
       }
     );
 
+    // 监听配置变更：keybindings 等改变后重发 INIT 让 webview 立即生效
+    const configSubscription = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('markdownGo')) {
+        this.sendInit(webviewPanel.webview, document).catch((err) =>
+          logger.error(`[Provider.sendInit on config change] ${err}`)
+        );
+      }
+    });
+
     // 清理
     webviewPanel.onDidDispose(() => {
       messageDisposable.dispose();
       changeDocumentSubscription.dispose();
+      configSubscription.dispose();
     });
   }
 
@@ -138,6 +148,8 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     const language = (config.get<string>('language') || 'zh-cn') as LanguageCode;
     const defaultMode = (config.get<string>('defaultMode') || 'edit') as DisplayMode;
     const slashTrigger = config.get<string>('slashTrigger') || '/';
+    const keybindings =
+      config.get<Record<string, string | string[]>>('keybindings') || {};
 
     const initPayload: InitPayload = {
       content: document.getText(),
@@ -147,6 +159,7 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
         language,
         defaultMode,
         slashTrigger,
+        keybindings,
       },
     };
 

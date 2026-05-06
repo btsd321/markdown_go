@@ -140,6 +140,10 @@ class App {
     this.currentLanguage = payload.language;
     this.currentMarkdown = payload.content;
     this.renderMenubar();
+    // 应用用户自定义快捷键（若有）
+    if (payload.config?.keybindings) {
+      this.editor.setKeybindings(payload.config.keybindings);
+    }
     this.editor.bootstrap(payload.content);
     this.plain.setMarkdown(payload.content);
     this.applyMode();

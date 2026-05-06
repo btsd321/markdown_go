@@ -87,6 +87,8 @@ export interface ConfigSnapshot {
   language: LanguageCode;
   defaultMode: DisplayMode;
   slashTrigger: string;
+  /** 用户自定义快捷键：commandId → chord 字符串或数组（空字符串/数组表示取消绑定） */
+  keybindings?: Record<string, string | string[]>;
 }
 
 // ============ 消息 Payload 类型 ============

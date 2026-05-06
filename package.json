@@ -61,6 +61,17 @@
           "type": "string",
           "default": "/",
           "description": "Character that triggers the slash menu"
+        },
+        "markdownGo.keybindings": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Override editor key bindings. Keys are command IDs, values are chord strings (e.g. `\"Ctrl+Shift+Z\"`) or arrays. Use modifiers `Ctrl`/`Cmd`/`Shift`/`Alt`, or `Mod` for cross-platform main modifier (Mac→Cmd, others→Ctrl). Set value to `\"\"` to unbind a default.\n\nAvailable command IDs:\n- `editor.undo`\n- `editor.redo`\n- `editor.enter`\n- `editor.softLineBreak`\n- `editor.backspaceAtStart`\n- `editor.indent`\n- `editor.outdent`\n\nExample:\n```json\n\"markdownGo.keybindings\": {\n  \"editor.indent\": \"Tab\",\n  \"editor.redo\": [\"Mod+Y\", \"Mod+Shift+Z\"]\n}\n```",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
         }
       }
     }
