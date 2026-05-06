@@ -68,14 +68,19 @@ class App {
 
     this.renderMenubar();
 
-    this.editor = new TiptapEditor(this.editorHost, {
-      onSync: (markdown) => {
-        this.currentMarkdown = markdown;
-        this.plain?.setMarkdown(markdown);
-        this.syncToExtension(markdown);
+    this.editor = new TiptapEditor(
+      this.editorHost,
+      {
+        onSync: (markdown) => {
+          this.currentMarkdown = markdown;
+          this.plain?.setMarkdown(markdown);
+          this.syncToExtension(markdown);
+        },
+        log: (msg, data) => bridge.log('info', msg, data),
       },
-      log: (msg, data) => bridge.log('info', msg, data),
-    });
+      // slashTrigger 在 INIT 后会调 setSlashTrigger处理；先以默认 "/" 启动
+      { slashTrigger: '/' },
+    );
 
     this.plain = new PlainView(viewport, {
       onChange: (markdown) => {
@@ -127,6 +132,9 @@ class App {
     this.currentLanguage = payload.language;
     this.currentMarkdown = payload.content;
     this.renderMenubar();
+    if (payload.config?.slashTrigger) {
+      this.editor.setSlashTrigger(payload.config.slashTrigger);
+    }
     this.editor.bootstrap(payload.content);
     this.plain.setMarkdown(payload.content);
     this.applyMode();

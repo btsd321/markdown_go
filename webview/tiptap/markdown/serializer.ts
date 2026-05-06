@@ -22,9 +22,26 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
     text: def.nodes.text,
   };
 
-  // Tiptap 节点用 camelCase 名字，prosemirror-markdown 默认是 snake_case
-  if (schema.nodes.bulletList) nodes.bulletList = def.nodes.bullet_list;
-  if (schema.nodes.orderedList) nodes.orderedList = def.nodes.ordered_list;
+  // Tiptap 节点用 camelCase 名字，prosemirror-markdown 默认是 snake_case。
+  // bulletList / orderedList 需要自定义：
+  //   1. bullet 标记用 "-" 而非默认 "*"（与 markdown-it parse 出来的更对齐）
+  //   2. Tiptap schema 没有 tight 属性 → 通过 options.tightLists=true 让列表紧凑
+  if (schema.nodes.bulletList) {
+    nodes.bulletList = (state: any, node: any) => {
+      state.renderList(node, '  ', () => '- ');
+    };
+  }
+  if (schema.nodes.orderedList) {
+    nodes.orderedList = (state: any, node: any) => {
+      const start = node.attrs.start || 1;
+      const maxW = String(start + node.childCount - 1).length;
+      const space = state.repeat(' ', maxW + 2);
+      state.renderList(node, space, (i: number) => {
+        const nStr = String(start + i);
+        return state.repeat(' ', maxW - nStr.length) + nStr + '. ';
+      });
+    };
+  }
   if (schema.nodes.listItem) nodes.listItem = def.nodes.list_item;
   if (schema.nodes.horizontalRule) nodes.horizontalRule = def.nodes.horizontal_rule;
   if (schema.nodes.hardBreak) nodes.hardBreak = def.nodes.hard_break;
@@ -83,5 +100,7 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
     if (!schema.marks[k]) delete marks[k];
   }
 
-  return new MarkdownSerializer(nodes, marks);
+  // tightLists 在 prosemirror-markdown 运行时支持（renderList 内读取），
+  // 但 d.ts 未暴露 → 用 as any 绕开。
+  return new MarkdownSerializer(nodes, marks, { tightLists: true } as any);
 }
