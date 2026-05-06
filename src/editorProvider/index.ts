@@ -95,6 +95,25 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
     let documentVersion = 0;
+    /** 本会话内是否已确认允许覆写（一旦确认或勾选「不再提示」即跳过后续提示） */
+    let overwriteConfirmed = false;
+
+    /** 把当前磁盘内容作为 DOC_SYNC 推回 webview，用于「取消覆写」时回滚 webview 状态 */
+    const resyncWebview = () => {
+      documentVersion++;
+      const text = document.getText();
+      const syncPayload: DocSyncPayload = {
+        content: text,
+        version: documentVersion,
+        source: 'external',
+      };
+      webviewPanel.webview.postMessage({
+        type: MessageType.DOC_SYNC,
+        source: 'extension',
+        payload: syncPayload,
+        timestamp: Date.now(),
+      });
+    };
 
     // 监听 Webview 消息
     const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
@@ -114,6 +133,38 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
                 (changePayload.edits[0]?.newText || '').slice(0, 120)
               )}`
             );
+            // 覆写前确认：仅在「会话内首次实际改动文档」时弹窗
+            if (!overwriteConfirmed) {
+              const cfg = vscode.workspace.getConfiguration('markdownGo');
+              const needConfirm = cfg.get<boolean>('confirmOverwrite', true);
+              if (needConfirm && willActuallyChange(document, changePayload.edits)) {
+                const lang = (cfg.get<string>('language') || 'en') as LanguageCode;
+                const t = overwriteDialogStrings(lang);
+                const choice = await vscode.window.showWarningMessage(
+                  t.message,
+                  { modal: true },
+                  t.confirm,
+                  t.dontAsk,
+                );
+                if (choice === t.confirm) {
+                  overwriteConfirmed = true;
+                } else if (choice === t.dontAsk) {
+                  overwriteConfirmed = true;
+                  await cfg.update(
+                    'confirmOverwrite',
+                    false,
+                    vscode.ConfigurationTarget.Global,
+                  );
+                } else {
+                  // 用户取消（含 Esc / 关闭按钮）：丢弃本次写回，并把磁盘内容回灌 webview
+                  logger.info('[Provider.DOC_CHANGE] user cancelled overwrite, resync webview');
+                  resyncWebview();
+                  break;
+                }
+              } else if (!needConfirm) {
+                overwriteConfirmed = true;
+              }
+            }
             await this.applyEdits(document, changePayload.edits);
             documentVersion++;
             break;
@@ -434,4 +485,42 @@ function toPosixRelative(baseDir: string, abs: string): string {
   } catch {
     return abs.replace(/\\/g, '/');
   }
+}
+
+/** 判断 webview 发回的 edits 应用后是否会真正改变文档内容（按行尾归一化比对） */
+function willActuallyChange(
+  document: vscode.TextDocument,
+  edits: DocChangePayload['edits'],
+): boolean {
+  if (edits.length !== 1) return true;
+  const e = edits[0];
+  const isFullReplace =
+    e.range.startLine === 0 &&
+    e.range.startChar === 0 &&
+    e.range.endLine >= document.lineCount;
+  if (!isFullReplace) return true;
+  const norm = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return norm(document.getText()) !== norm(e.newText);
+}
+
+/** 覆写确认对话框文案（与 webview 语言一致） */
+function overwriteDialogStrings(lang: LanguageCode): {
+  message: string;
+  confirm: string;
+  dontAsk: string;
+} {
+  if (lang === 'zh-cn') {
+    return {
+      message:
+        'Markdown Go 将要写回文档。由于编辑器会对格式进行规范化（列表编号、缩进、软换行、空行等），未编辑的部分也可能被修改，是否继续？',
+      confirm: '覆盖写入',
+      dontAsk: '不再提示',
+    };
+  }
+  return {
+    message:
+      'Markdown Go is about to write back the document. Because the editor normalizes formatting (list numbering, indentation, soft line breaks, blank lines, etc.), unedited parts may also be modified. Continue?',
+    confirm: 'Overwrite',
+    dontAsk: "Don't ask again",
+  };
 }

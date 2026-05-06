@@ -7,5 +7,10 @@
   "config.language.description": "Editor UI language",
   "config.defaultMode.description": "Default display mode when opening a document",
   "config.slashTrigger.description": "Character that triggers the slash menu",
-  "config.defaultCopyFormat.description": "Default copy format for Ctrl+C: markdown source or plain text"
+  "config.defaultCopyFormat.description": "Default copy format for Ctrl+C: markdown source or plain text",
+  "config.confirmOverwrite.description": "Show a confirmation dialog before the editor first writes back the (normalized) content to disk. Disable to skip the prompt.",
+  "dialog.confirmOverwrite.message": "Markdown Go is about to write back the document. Because the editor normalizes formatting (list numbering, indentation, soft line breaks, blank lines, etc.), unedited parts may also be modified. Continue?",
+  "dialog.confirmOverwrite.confirm": "Overwrite",
+  "dialog.confirmOverwrite.cancel": "Cancel",
+  "dialog.confirmOverwrite.dontAsk": "Don't ask again"
 }

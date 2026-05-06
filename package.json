@@ -2,7 +2,7 @@
   "name": "markdown-go",
   "displayName": "Markdown Go",
   "description": "WYSIWYG Markdown editor for beginners",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "btsd321",
   "license": "MIT",
   "repository": {
@@ -121,6 +121,11 @@
           ],
           "default": "markdown",
           "description": "%config.defaultCopyFormat.description%"
+        },
+        "markdownGo.confirmOverwrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.confirmOverwrite.description%"
         },
         "markdownGo.keybindings": {
           "type": "object",

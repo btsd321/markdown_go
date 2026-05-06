@@ -7,5 +7,10 @@
   "config.language.description": "编辑器界面语言",
   "config.defaultMode.description": "打开文档时的默认显示模式",
   "config.slashTrigger.description": "触发主下拉菜单的字符",
-  "config.defaultCopyFormat.description": "Ctrl+C 默认复制格式：markdown 源码或纯文本"
+  "config.defaultCopyFormat.description": "Ctrl+C 默认复制格式：markdown 源码或纯文本",
+  "config.confirmOverwrite.description": "编辑器首次将（规范化后的）内容写回磁盘前，弹出确认对话框。关闭后不再提示。",
+  "dialog.confirmOverwrite.message": "Markdown Go 将要写回文档。由于编辑器会对格式进行规范化（列表编号、缩进、软换行、空行等），未编辑的部分也可能被修改，是否继续？",
+  "dialog.confirmOverwrite.confirm": "覆盖写入",
+  "dialog.confirmOverwrite.cancel": "取消",
+  "dialog.confirmOverwrite.dontAsk": "不再提示"
 }
