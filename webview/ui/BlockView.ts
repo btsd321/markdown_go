@@ -18,7 +18,7 @@ function handleLabelOf(type: Block['type']): string {
     case 'list-unordered':
       return '•';
     case 'list-ordered':
-      return '1.';
+      return 'n.';
     case 'latex':
       return 'fx';
     case 'mermaid':
