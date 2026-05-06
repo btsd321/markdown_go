@@ -16,6 +16,7 @@ import { LatexBlock } from './nodes/LatexBlock';
 import { MermaidBlock } from './nodes/MermaidBlock';
 import { ImageWithBase } from './nodes/ImageWithBase';
 import { VideoBlock } from './nodes/VideoBlock';
+import { AlignBackspace } from './extensions/AlignBackspace';
 import { buildMarkdownParser } from './markdown/parser';
 import { buildMarkdownSerializer } from './markdown/serializer';
 import { createBubbleMenu, BubbleMenuFactory } from './menus/BubbleMenu';
@@ -90,6 +91,7 @@ export class TiptapEditor {
           alignments: ['left', 'center', 'right'],
           defaultAlignment: 'left',
         }),
+        AlignBackspace,
         LatexBlock,
         MermaidBlock,
         ImageWithBase,

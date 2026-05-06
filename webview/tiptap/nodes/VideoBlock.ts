@@ -12,6 +12,7 @@
  * - 序列化输出 HTML 块（详见 serializer.ts）。
  */
 import { Node, mergeAttributes } from '@tiptap/core';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { resolveImageSrc } from '../../runtime/imageBase';
 
 export interface VideoBlockAttrs {
@@ -108,5 +109,26 @@ export const VideoBlock = Node.create({
     if (attrs.width) videoAttrs.width = attrs.width;
     if (attrs.height) videoAttrs.height = attrs.height;
     return ['video', mergeAttributes(videoAttrs)];
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => {
+        const { state, dispatch } = this.editor.view;
+        const sel = state.selection;
+        if (sel instanceof NodeSelection && sel.node.type.name === 'videoBlock') {
+          const after = sel.$from.after();
+          const tr = state.tr.insert(
+            after,
+            state.schema.nodes.paragraph.create(),
+          );
+          tr.setSelection(TextSelection.create(tr.doc, after + 1));
+          tr.scrollIntoView();
+          dispatch(tr);
+          return true;
+        }
+        return false;
+      },
+    };
   },
 });

@@ -22,7 +22,13 @@ graph LR
 
 ## 图片测试
 
+<div align="center">
+
 ![测试图片](../assets/imgs/markdown%20go.png)
+
+</div>
+
+## 视频测试
 
 ## 列表测试
 
