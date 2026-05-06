@@ -4,6 +4,7 @@
   "description": "WYSIWYG Markdown editor for beginners",
   "version": "0.0.1",
   "publisher": "markdown-go",
+  "icon": "assets/imgs/markdown go.png",
   "engines": {
     "vscode": "^1.85.0"
   },
