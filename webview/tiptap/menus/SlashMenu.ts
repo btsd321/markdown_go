@@ -23,7 +23,8 @@ import type { Editor } from '@tiptap/core';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import { openPromptDialog } from '../../ui/PromptDialog';
+import { InsertItem, filterItems } from './insertItems';
+import { onLocaleChange } from '../../i18n';
 
 interface SlashState {
   active: boolean;
@@ -31,129 +32,6 @@ interface SlashState {
   from: number;
   /** trigger 之后的查询文本 */
   query: string;
-}
-
-interface SlashItem {
-  key: string;
-  label: string;
-  hint?: string;
-  /** 关键字（用于过滤） */
-  keywords: string[];
-  /** 已删除 trigger..cursor 后执行 */
-  run: (editor: Editor) => unknown | Promise<unknown>;
-}
-
-function buildItems(): SlashItem[] {
-  return [
-    {
-      key: 'h1',
-      label: '标题 1',
-      hint: 'H1',
-      keywords: ['h1', 'heading1', '标题', 'biaoti'],
-      run: (e) => e.chain().focus().setNode('heading', { level: 1 }).run(),
-    },
-    {
-      key: 'h2',
-      label: '标题 2',
-      hint: 'H2',
-      keywords: ['h2', 'heading2', '标题'],
-      run: (e) => e.chain().focus().setNode('heading', { level: 2 }).run(),
-    },
-    {
-      key: 'h3',
-      label: '标题 3',
-      hint: 'H3',
-      keywords: ['h3', 'heading3', '标题'],
-      run: (e) => e.chain().focus().setNode('heading', { level: 3 }).run(),
-    },
-    {
-      key: 'p',
-      label: '正文段落',
-      hint: 'P',
-      keywords: ['p', 'paragraph', '段落', 'duanluo'],
-      run: (e) => e.chain().focus().setParagraph().run(),
-    },
-    {
-      key: 'ul',
-      label: '无序列表',
-      hint: '- ',
-      keywords: ['ul', 'bullet', '无序', 'list', 'liebiao'],
-      run: (e) => e.chain().focus().toggleBulletList().run(),
-    },
-    {
-      key: 'ol',
-      label: '有序列表',
-      hint: '1.',
-      keywords: ['ol', 'order', '有序', 'list'],
-      run: (e) => e.chain().focus().toggleOrderedList().run(),
-    },
-    {
-      key: 'quote',
-      label: '引用',
-      hint: '> ',
-      keywords: ['quote', 'blockquote', '引用', 'yinyong'],
-      run: (e) => e.chain().focus().toggleBlockquote().run(),
-    },
-    {
-      key: 'code',
-      label: '代码块',
-      hint: '{ }',
-      keywords: ['code', 'codeblock', '代码', 'daima'],
-      run: (e) => e.chain().focus().toggleCodeBlock().run(),
-    },
-    {
-      key: 'hr',
-      label: '分割线',
-      hint: '---',
-      keywords: ['hr', 'rule', '分割', 'fenge'],
-      run: (e) => e.chain().focus().setHorizontalRule().run(),
-    },
-    {
-      key: 'latex',
-      label: 'LaTeX 公式',
-      hint: '$$',
-      keywords: ['latex', 'math', '公式', 'formula', 'gongshi'],
-      run: async (e) => {
-        const src = await openPromptDialog({
-          title: '插入 LaTeX 公式',
-          placeholder: 'E = mc^2',
-          confirmLabel: '插入',
-        });
-        if (src === null || !src.trim()) return;
-        e.chain().focus().insertContent({
-          type: 'latexBlock',
-          attrs: { src: src.trim() },
-        }).run();
-      },
-    },
-    {
-      key: 'mermaid',
-      label: 'Mermaid 图表',
-      hint: '◇',
-      keywords: ['mermaid', '图表', 'tubiao', 'diagram', 'flow'],
-      run: async (e) => {
-        const src = await openPromptDialog({
-          title: '插入 Mermaid 图表',
-          placeholder: 'graph LR\n  A --> B',
-          confirmLabel: '插入',
-        });
-        if (src === null || !src.trim()) return;
-        e.chain().focus().insertContent({
-          type: 'mermaidBlock',
-          attrs: { src: src.trim() },
-        }).run();
-      },
-    },
-  ];
-}
-
-function filterItems(items: SlashItem[], query: string): SlashItem[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return items;
-  return items.filter((it) => {
-    if (it.label.toLowerCase().includes(q)) return true;
-    return it.keywords.some((k) => k.toLowerCase().includes(q));
-  });
 }
 
 export interface SlashMenuOptions {
@@ -169,7 +47,6 @@ export interface SlashMenuController {
 
 export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
   let trigger = opts.trigger || '/';
-  const items = buildItems();
 
   // ----- DOM -----
   const popup = document.createElement('div');
@@ -179,8 +56,14 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
 
   let editorRef: Editor | null = null;
   let activeIndex = 0;
-  let visibleItems: SlashItem[] = [];
+  let visibleItems: InsertItem[] = [];
   let currentState: SlashState = { active: false, from: 0, query: '' };
+  let lastView: EditorView | null = null;
+
+  // 语言切换：若当前菜单打开，重新渲染以使 label 本地化
+  const offLocale = onLocaleChange(() => {
+    if (currentState.active && lastView) render(currentState, lastView);
+  });
 
   function hide() {
     popup.style.display = 'none';
@@ -188,7 +71,8 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
   }
 
   function render(state: SlashState, view: EditorView) {
-    visibleItems = filterItems(items, state.query);
+    lastView = view;
+    visibleItems = filterItems(state.query);
     if (visibleItems.length === 0) {
       hide();
       return;
@@ -358,6 +242,7 @@ export function createSlashMenu(opts: SlashMenuOptions): SlashMenuController {
       if (next && next.length >= 1) trigger = next.slice(0, 4);
     },
     destroy() {
+      offLocale();
       hide();
       popup.remove();
     },

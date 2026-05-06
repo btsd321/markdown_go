@@ -9,10 +9,12 @@
  */
 import type { Editor } from '@tiptap/core';
 import BubbleMenu from '@tiptap/extension-bubble-menu';
+import { t, onLocaleChange } from '../../i18n';
 
 interface BlockTypeItem {
   key: string;
-  label: string;
+  /** 本地化 label 的接口 */
+  getLabel(): string;
   isActive: (e: Editor) => boolean;
   apply: (e: Editor) => void;
 }
@@ -20,49 +22,49 @@ interface BlockTypeItem {
 const BLOCK_TYPES: BlockTypeItem[] = [
   {
     key: 'paragraph',
-    label: '段落',
+    getLabel: () => t('block.paragraph'),
     isActive: (e) => e.isActive('paragraph') && !e.isActive('heading'),
     apply: (e) => e.chain().focus().setParagraph().run(),
   },
   {
     key: 'h1',
-    label: '标题 1',
+    getLabel: () => t('block.h1'),
     isActive: (e) => e.isActive('heading', { level: 1 }),
     apply: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(),
   },
   {
     key: 'h2',
-    label: '标题 2',
+    getLabel: () => t('block.h2'),
     isActive: (e) => e.isActive('heading', { level: 2 }),
     apply: (e) => e.chain().focus().toggleHeading({ level: 2 }).run(),
   },
   {
     key: 'h3',
-    label: '标题 3',
+    getLabel: () => t('block.h3'),
     isActive: (e) => e.isActive('heading', { level: 3 }),
     apply: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(),
   },
   {
     key: 'ul',
-    label: '无序列表',
+    getLabel: () => t('block.ul'),
     isActive: (e) => e.isActive('bulletList'),
     apply: (e) => e.chain().focus().toggleBulletList().run(),
   },
   {
     key: 'ol',
-    label: '有序列表',
+    getLabel: () => t('block.ol'),
     isActive: (e) => e.isActive('orderedList'),
     apply: (e) => e.chain().focus().toggleOrderedList().run(),
   },
   {
     key: 'quote',
-    label: '引用',
+    getLabel: () => t('block.quote'),
     isActive: (e) => e.isActive('blockquote'),
     apply: (e) => e.chain().focus().toggleBlockquote().run(),
   },
   {
     key: 'code',
-    label: '代码块',
+    getLabel: () => t('block.codeBlock'),
     isActive: (e) => e.isActive('codeBlock'),
     apply: (e) => e.chain().focus().toggleCodeBlock().run(),
   },
@@ -71,7 +73,8 @@ const BLOCK_TYPES: BlockTypeItem[] = [
 interface InlineItem {
   key: string;
   label: string;
-  title: string;
+  /** 本地化 title 的接口 */
+  getTitle(): string;
   isActive: (e: Editor) => boolean;
   apply: (e: Editor) => void;
 }
@@ -80,28 +83,28 @@ const INLINES: InlineItem[] = [
   {
     key: 'bold',
     label: 'B',
-    title: '加粗',
+    getTitle: () => t('inline.bold'),
     isActive: (e) => e.isActive('bold'),
     apply: (e) => e.chain().focus().toggleBold().run(),
   },
   {
     key: 'italic',
     label: 'I',
-    title: '斜体',
+    getTitle: () => t('inline.italic'),
     isActive: (e) => e.isActive('italic'),
     apply: (e) => e.chain().focus().toggleItalic().run(),
   },
   {
     key: 'strike',
     label: 'S',
-    title: '删除线',
+    getTitle: () => t('inline.strike'),
     isActive: (e) => e.isActive('strike'),
     apply: (e) => e.chain().focus().toggleStrike().run(),
   },
   {
     key: 'code',
     label: '<>',
-    title: '行内代码',
+    getTitle: () => t('inline.code'),
     isActive: (e) => e.isActive('code'),
     apply: (e) => e.chain().focus().toggleCode().run(),
   },
@@ -127,8 +130,8 @@ export function createBubbleMenu(): BubbleMenuFactory {
   const typeBtn = document.createElement('button');
   typeBtn.type = 'button';
   typeBtn.className = 'bubble-btn bubble-type-btn';
-  typeBtn.title = '块类型';
-  typeBtn.innerHTML = '<span class="bubble-type-label">段落</span><span class="bubble-caret">▾</span>';
+  typeBtn.title = t('bubble.typeBtnTitle');
+  typeBtn.innerHTML = `<span class="bubble-type-label">${t('block.paragraph')}</span><span class="bubble-caret">▾</span>`;
   const typeMenu = document.createElement('div');
   typeMenu.className = 'bubble-type-menu';
   typeMenu.style.display = 'none';
@@ -177,7 +180,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'bubble-type-item';
-      el.textContent = item.label;
+      el.textContent = item.getLabel();
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -194,7 +197,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'bubble-btn bubble-inline-btn';
-      el.title = item.title;
+      el.title = item.getTitle();
       el.textContent = item.label;
       el.addEventListener('mousedown', (e) => {
         e.preventDefault();
@@ -209,11 +212,11 @@ export function createBubbleMenu(): BubbleMenuFactory {
 
   function refreshActive() {
     if (!editorRef) return;
-    let activeLabel = '段落';
+    let activeLabel = t('block.paragraph');
     for (const { item, el } of typeItemEls) {
       const active = item.isActive(editorRef);
       el.classList.toggle('is-active', active);
-      if (active) activeLabel = item.label;
+      if (active) activeLabel = item.getLabel();
     }
     const labelEl = typeBtn.querySelector('.bubble-type-label');
     if (labelEl) labelEl.textContent = activeLabel;
@@ -221,6 +224,15 @@ export function createBubbleMenu(): BubbleMenuFactory {
       el.classList.toggle('is-active', item.isActive(editorRef));
     }
   }
+
+  // 语言切换：重建项 + 刷新高亮 + 同步 typeBtn title
+  const offLocale = onLocaleChange(() => {
+    typeBtn.title = t('bubble.typeBtnTitle');
+    if (editorRef) {
+      buildItems(editorRef);
+      refreshActive();
+    }
+  });
 
   const extension = BubbleMenu.configure({
     element,
@@ -251,6 +263,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
       refreshActive();
     },
     destroy() {
+      offLocale();
       element.remove();
     },
   };

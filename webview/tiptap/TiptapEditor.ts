@@ -14,6 +14,8 @@ import { buildMarkdownParser } from './markdown/parser';
 import { buildMarkdownSerializer } from './markdown/serializer';
 import { createBubbleMenu, BubbleMenuFactory } from './menus/BubbleMenu';
 import { createSlashMenu, SlashMenuController } from './menus/SlashMenu';
+import { createBlockHandle, BlockHandleController } from './menus/BlockHandle';
+import { createContextMenu, ContextMenuController } from './menus/ContextMenu';
 
 export interface TiptapEditorCallbacks {
   /** 文档变化（已序列化为 markdown） */
@@ -35,6 +37,8 @@ export class TiptapEditor {
   private serializer: ReturnType<typeof buildMarkdownSerializer>;
   private bubbleMenu: BubbleMenuFactory;
   private slashMenu: SlashMenuController;
+  private blockHandle: BlockHandleController;
+  private contextMenu: ContextMenuController;
 
   /** 上次主动写出的 markdown，用于回灌时识别 echo */
   private lastSentMarkdown: string | null = null;
@@ -49,6 +53,8 @@ export class TiptapEditor {
   ) {
     this.bubbleMenu = createBubbleMenu();
     this.slashMenu = createSlashMenu({ trigger: options.slashTrigger || '/' });
+    this.blockHandle = createBlockHandle();
+    this.contextMenu = createContextMenu({ getSerializer: () => this.serializer });
 
     this.editor = new TiptapCore({
       element: host,
@@ -60,6 +66,8 @@ export class TiptapEditor {
         MermaidBlock,
         this.bubbleMenu.extension,
         this.slashMenu.extension,
+        this.blockHandle.extension,
+        this.contextMenu.extension,
       ],
       content: '',
       autofocus: false,
@@ -70,6 +78,8 @@ export class TiptapEditor {
     this.serializer = buildMarkdownSerializer(this.editor.schema);
     this.bubbleMenu.bind(this.editor);
     this.slashMenu.bind(this.editor);
+    this.blockHandle.bind(this.editor);
+    this.contextMenu.bind(this.editor);
   }
 
   /** 用初始 markdown 启动 */
@@ -131,6 +141,8 @@ export class TiptapEditor {
     }
     this.bubbleMenu.destroy();
     this.slashMenu.destroy();
+    this.blockHandle.destroy();
+    this.contextMenu.destroy();
     this.editor.destroy();
   }
 

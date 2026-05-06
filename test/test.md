@@ -8,7 +8,7 @@
 
 这是一个段落。
 
-## 代码块测试
+## LaTex/Mermai测试
 
 $$
 E = mc^{2} \quad \Rightarrow \quad \int_{0}^{\infty} e^{-x^{2}} \, dx = \frac{\sqrt{\pi}}{2}

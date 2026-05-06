@@ -14,6 +14,7 @@ import { bridge } from './core/bridge';
 import { TiptapEditor } from './tiptap/TiptapEditor';
 import { renderMenubar } from './ui/Menubar';
 import { PlainView } from './ui/PlainView';
+import { setLocale, onLocaleChange, t } from './i18n';
 
 class App {
   private editor!: TiptapEditor;
@@ -35,6 +36,12 @@ class App {
 
     bridge.on<InitPayload>(MessageType.INIT, (p) => this.handleInit(p));
     bridge.on<DocSyncPayload>(MessageType.DOC_SYNC, (p) => this.handleDocSync(p));
+
+    // 语言切换 -> 顶栏 / preview 占位文案
+    onLocaleChange(() => {
+      this.renderMenubar();
+      this.previewHost.textContent = t('plain.placeholder');
+    });
 
     bridge.send(MessageType.READY, { version: '0.0.1' });
     bridge.log('info', 'Webview initialized (Tiptap)');
@@ -61,7 +68,7 @@ class App {
 
     this.previewHost = document.createElement('div');
     this.previewHost.className = 'preview-view';
-    this.previewHost.textContent = '预览模式开发中…';
+    this.previewHost.textContent = '';
     viewport.appendChild(this.previewHost);
 
     app.appendChild(editorRoot);
@@ -109,6 +116,8 @@ class App {
         },
         onLanguageChange: (l) => {
           this.currentLanguage = l;
+          setLocale(l);
+          this.renderMenubar();
           bridge.send(MessageType.LANG_CHANGE, { language: l });
         },
       })
@@ -119,6 +128,7 @@ class App {
     const mode = this.currentMode;
     this.editorHost.style.display = mode === 'edit' ? '' : 'none';
     this.previewHost.style.display = mode === 'preview' ? '' : 'none';
+    this.previewHost.textContent = t('plain.placeholder');
     if (mode === 'plain') {
       this.plain.setMarkdown(this.currentMarkdown);
       this.plain.show();
@@ -131,6 +141,7 @@ class App {
     this.currentMode = payload.mode;
     this.currentLanguage = payload.language;
     this.currentMarkdown = payload.content;
+    setLocale(this.currentLanguage);
     this.renderMenubar();
     if (payload.config?.slashTrigger) {
       this.editor.setSlashTrigger(payload.config.slashTrigger);

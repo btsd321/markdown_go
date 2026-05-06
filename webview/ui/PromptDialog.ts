@@ -7,6 +7,7 @@
  *   - Esc           → 取消
  *   - 点击遮罩区域  → 取消
  */
+import { t } from '../i18n';
 export interface PromptDialogOptions {
   title: string;
   placeholder?: string;
@@ -32,7 +33,7 @@ export function openPromptDialog(opts: PromptDialogOptions): Promise<string | nu
 
     const hint = document.createElement('div');
     hint.className = 'modal-hint';
-    hint.textContent = 'Enter 确认 ·  Shift+Enter 换行 · Esc 取消';
+    hint.textContent = t('dialog.hint');
 
     const textarea = document.createElement('textarea');
     textarea.className = 'modal-textarea';
@@ -46,12 +47,12 @@ export function openPromptDialog(opts: PromptDialogOptions): Promise<string | nu
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'modal-btn modal-btn-secondary';
-    cancelBtn.textContent = opts.cancelLabel ?? '取消';
+    cancelBtn.textContent = opts.cancelLabel ?? t('dialog.cancel');
 
     const okBtn = document.createElement('button');
     okBtn.type = 'button';
     okBtn.className = 'modal-btn modal-btn-primary';
-    okBtn.textContent = opts.confirmLabel ?? '插入';
+    okBtn.textContent = opts.confirmLabel ?? t('dialog.confirm');
 
     actions.append(cancelBtn, okBtn);
     dialog.append(titleEl, hint, textarea, actions);

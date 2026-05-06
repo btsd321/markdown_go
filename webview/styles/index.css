@@ -399,3 +399,67 @@ body {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.85em;
 }
+
+/* ========== BlockHandle（行首块类型按钮） ========== */
+.mg-block-handle {
+  position: fixed;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--vscode-font-family);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+  user-select: none;
+}
+.mg-block-handle:hover {
+  opacity: 1;
+  background: var(--vscode-list-hoverBackground);
+}
+.mg-block-handle-menu {
+  /* 复用 .slash-menu 样式即可 */
+}
+
+/* ========== ContextMenu（右键菜单） ========== */
+.mg-context-menu {
+  position: fixed;
+  min-width: 200px;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, var(--vscode-panel-border)));
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+  z-index: 2000;
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  user-select: none;
+}
+.mg-context-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  cursor: pointer;
+  gap: 16px;
+}
+.mg-context-item:hover,
+.mg-context-item.is-active {
+  background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}
+.mg-context-hint {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+}

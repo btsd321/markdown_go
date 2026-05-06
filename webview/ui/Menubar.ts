@@ -1,9 +1,10 @@
 /**
  * 顶部菜单栏
  *
- * 渲染模式 / 语言两个下拉框，并在变更时回调上层。
+ * 渲染模式 / 语言两个下拉框，并在变更时回调上层。所有文本走 i18n。
  */
 import { DisplayMode, LanguageCode } from '../../shared';
+import { t } from '../i18n';
 
 export interface MenubarOptions {
   mode: DisplayMode;
@@ -12,29 +13,27 @@ export interface MenubarOptions {
   onLanguageChange(lang: LanguageCode): void;
 }
 
-const MODE_LABELS: Record<DisplayMode, string> = {
-  edit: '编辑',
-  preview: '预览',
-  plain: '纯文本',
-};
-
-const LANG_LABELS: Record<LanguageCode, string> = {
-  'zh-cn': '中文',
-  en: 'English',
-};
-
 export function renderMenubar(opts: MenubarOptions): HTMLElement {
   const bar = document.createElement('div');
   bar.className = 'menubar';
 
+  const modeLabels: Record<DisplayMode, string> = {
+    edit: t('mode.edit'),
+    preview: t('mode.preview'),
+    plain: t('mode.plain'),
+  };
+  const langLabels: Record<LanguageCode, string> = {
+    'zh-cn': t('lang.zh-cn'),
+    en: t('lang.en'),
+  };
+
   bar.appendChild(
-    buildSelect('模式', ['edit', 'preview', 'plain'], opts.mode, MODE_LABELS, (v) =>
+    buildSelect(t('menubar.mode'), ['edit', 'preview', 'plain'], opts.mode, modeLabels, (v) =>
       opts.onModeChange(v as DisplayMode)
     )
   );
-
   bar.appendChild(
-    buildSelect('语言', ['zh-cn', 'en'], opts.language, LANG_LABELS, (v) =>
+    buildSelect(t('menubar.language'), ['zh-cn', 'en'], opts.language, langLabels, (v) =>
       opts.onLanguageChange(v as LanguageCode)
     )
   );
