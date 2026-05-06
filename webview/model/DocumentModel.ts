@@ -13,9 +13,13 @@ export class DocumentModel {
 
   /**
    * 从 Markdown 文本解析
+   *
+   * 注意：先把 CRLF / CR 归一化为 LF，否则块内容会残留 \r，
+   * 导致后续 toMarkdown 与宿主回灌内容比对失败、引发回环。
    */
   fromMarkdown(text: string): void {
-    const lines = text.split('\n');
+    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = normalized.split('\n');
     const newBlocks: Block[] = [];
 
     let inCodeBlock = false;
@@ -68,14 +72,13 @@ export class DocumentModel {
         continue;
       }
 
-      // 普通段落
-      if (line.trim()) {
-        newBlocks.push({
-          id: this.generateId(),
-          type: 'paragraph',
-          content: line,
-        });
-      }
+      // 普通行（包括空行）都作为一个独立的 paragraph 块，
+      // 这样源文件中的空行/缩进能被原样保留。
+      newBlocks.push({
+        id: this.generateId(),
+        type: 'paragraph',
+        content: line,
+      });
     }
 
     // 替换所有块
@@ -85,6 +88,10 @@ export class DocumentModel {
 
   /**
    * 转换为 Markdown 文本
+   *
+   * 采用"一行一块"策略：直接用单个 \n 拼接所有块，
+   * 空 paragraph 输出为空行。源文件与块列表保持 1:1 映射，
+   * 不再需要为不同类型块补空行。
    */
   toMarkdown(): string {
     const lines: string[] = [];
@@ -102,19 +109,19 @@ export class DocumentModel {
           break;
         case 'latex':
           lines.push('```latex');
-          lines.push(block.content);
+          for (const l of block.content.split('\n')) lines.push(l);
           lines.push('```');
           break;
         case 'mermaid':
           lines.push('```mermaid');
-          lines.push(block.content);
+          for (const l of block.content.split('\n')) lines.push(l);
           lines.push('```');
           break;
         case 'paragraph':
+        default:
           lines.push(block.content);
           break;
       }
-      lines.push(''); // 空行分隔
     }
 
     return lines.join('\n');

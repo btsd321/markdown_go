@@ -39,6 +39,8 @@ export class Editor {
   private suppressSync = false;
   private history = new History(100);
   private snapshotTimer: number | null = null;
+  /** 最近一次 sync 给宿主的内容；用于识别回环 DOC_SYNC */
+  private lastSentMarkdown: string | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -64,8 +66,18 @@ export class Editor {
 
   /** 外部强制设置内容（如外部修改了文件） */
   setMarkdown(markdown: string): void {
+    // 归一化行尾后再做 echo 判断；宿主写盘会把 \n 转 CRLF，回灌内容不能直接 ===
+    const normalized = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const isEcho =
+      this.lastSentMarkdown !== null && normalized === this.lastSentMarkdown;
+    this.cb.log?.('[Editor.setMarkdown]', {
+      isEcho,
+      length: markdown.length,
+      preview: markdown.slice(0, 120),
+    });
+    if (isEcho) return;
     this.suppressSync = true;
-    this.model.fromMarkdown(markdown);
+    this.model.fromMarkdown(normalized);
     this.suppressSync = false;
     this.render();
   }
@@ -165,7 +177,13 @@ export class Editor {
     if (this.syncTimer !== null) return;
     this.syncTimer = window.setTimeout(() => {
       this.syncTimer = null;
-      this.cb.onSync(this.model.toMarkdown());
+      const md = this.model.toMarkdown();
+      this.lastSentMarkdown = md;
+      this.cb.log?.('[Editor.sync->host]', {
+        length: md.length,
+        preview: md.slice(0, 120),
+      });
+      this.cb.onSync(md);
     }, 80);
   }
 
@@ -228,6 +246,11 @@ export class Editor {
     this.flushPendingSnapshot();
     const newBlock: Block = { id: '', type: 'paragraph', content: '' };
     this.model.insertBlock(blockId, newBlock);
+    this.cb.log?.('[Editor.enterAfter] insertedAfter', {
+      after: blockId,
+      newId: newBlock.id,
+      blocks: this.model.getAllBlocks().map((b) => ({ id: b.id, type: b.type, content: b.content })),
+    });
     this.render();
     this.focusBlock(newBlock.id, 0);
     this.history.push(this.captureSnapshot());

@@ -167,3 +167,40 @@ body {
   background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
   margin: 4px 0;
 }
+
+/* ========== 纯文本 / 预览 视图 ========== */
+.viewport {
+  position: relative;
+  min-height: 200px;
+}
+
+.plain-view {
+  padding: 0 8px;
+}
+
+.plain-textarea {
+  width: 100%;
+  min-height: 60vh;
+  resize: vertical;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.5;
+  outline: none;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.plain-textarea:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.preview-view {
+  padding: 16px;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}

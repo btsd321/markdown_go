@@ -60,6 +60,11 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
           case MessageType.DOC_CHANGE:
             // Webview 发来文档变更
             const changePayload = message.payload as DocChangePayload;
+            logger.info(
+              `[Provider.DOC_CHANGE] edits=${changePayload.edits.length} firstNewLen=${changePayload.edits[0]?.newText.length} preview=${JSON.stringify(
+                (changePayload.edits[0]?.newText || '').slice(0, 120)
+              )}`
+            );
             await this.applyEdits(document, changePayload.edits);
             documentVersion++;
             break;
@@ -99,8 +104,12 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
         if (e.document.uri.toString() === document.uri.toString()) {
           // 同步到 Webview
           documentVersion++;
+          const text = document.getText();
+          logger.info(
+            `[Provider.onDidChange->DOC_SYNC] len=${text.length} preview=${JSON.stringify(text.slice(0, 120))}`
+          );
           const syncPayload: DocSyncPayload = {
-            content: document.getText(),
+            content: text,
             version: documentVersion,
             source: 'external',
           };
@@ -153,8 +162,25 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
     document: vscode.TextDocument,
     edits: DocChangePayload['edits']
   ): Promise<void> {
-    const workspaceEdit = new vscode.WorkspaceEdit();
+    // 如果只是一次"全文替换"且替换后的内容与当前完全一致（含行尾归一化后），
+    // 则跳过，避免 applyEdit 把文档标记为 dirty（撤销后仍出现小白点）
+    if (edits.length === 1) {
+      const e = edits[0];
+      const isFullReplace =
+        e.range.startLine === 0 &&
+        e.range.startChar === 0 &&
+        e.range.endLine >= document.lineCount;
+      if (isFullReplace) {
+        const current = document.getText();
+        const norm = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (norm(current) === norm(e.newText)) {
+          logger.info('[Provider.applyEdits] skip no-op full replace');
+          return;
+        }
+      }
+    }
 
+    const workspaceEdit = new vscode.WorkspaceEdit();
     for (const edit of edits) {
       const range = new vscode.Range(
         edit.range.startLine,
@@ -164,7 +190,6 @@ export class MarkdownGoEditorProvider implements vscode.CustomTextEditorProvider
       );
       workspaceEdit.replace(document.uri, range, edit.newText);
     }
-
     await vscode.workspace.applyEdit(workspaceEdit);
   }
 
