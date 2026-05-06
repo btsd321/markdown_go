@@ -30,6 +30,8 @@ graph LR
 
 ## 视频测试
 
+<video src="example.mp4" controls></video>
+
 ## 列表测试
 
 ### 无序列表

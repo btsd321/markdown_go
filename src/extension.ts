@@ -18,19 +18,27 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('markdownGo.openWith', async () => {
-      logger.debug('Command: markdownGo.openWith triggered');
-      const editor = vscode.window.activeTextEditor;
-      if (editor && editor.document.languageId === 'markdown') {
-        await vscode.commands.executeCommand(
-          'vscode.openWith',
-          editor.document.uri,
-          'markdownGo.editor'
-        );
-      } else {
-        vscode.window.showInformationMessage('Please open a Markdown file first');
-      }
-    })
+    vscode.commands.registerCommand(
+      'markdownGo.openWith',
+      async (uriArg?: vscode.Uri, uris?: vscode.Uri[]) => {
+        logger.debug('Command: markdownGo.openWith triggered');
+        // 资源管理器右键时 VS Code 会传入 (uri, uris)；命令面板/编辑器标题没有参数
+        const targets: vscode.Uri[] = [];
+        if (uris && uris.length) targets.push(...uris);
+        else if (uriArg) targets.push(uriArg);
+        else if (vscode.window.activeTextEditor) {
+          targets.push(vscode.window.activeTextEditor.document.uri);
+        }
+        const mdTargets = targets.filter((u) => /\.mdx?$|\.md$/i.test(u.fsPath));
+        if (mdTargets.length === 0) {
+          vscode.window.showInformationMessage('Please open a Markdown file first');
+          return;
+        }
+        for (const u of mdTargets) {
+          await vscode.commands.executeCommand('vscode.openWith', u, 'markdownGo.editor');
+        }
+      },
+    ),
   );
 
   context.subscriptions.push(

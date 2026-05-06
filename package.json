@@ -32,20 +32,51 @@
     "commands": [
       {
         "command": "markdownGo.openWith",
-        "title": "Open with Markdown Go",
+        "title": "%command.openWith.title%",
         "category": "Markdown Go"
       },
       {
         "command": "markdownGo.switchMode",
-        "title": "Switch Mode",
+        "title": "%command.switchMode.title%",
         "category": "Markdown Go"
       },
       {
         "command": "markdownGo.switchLanguage",
-        "title": "Switch Language",
+        "title": "%command.switchLanguage.title%",
         "category": "Markdown Go"
       }
     ],
+    "keybindings": [
+      {
+        "command": "markdownGo.openWith",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "editorLangId == markdown"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "markdownGo.openWith",
+          "when": "resourceLangId == markdown || resourceExtname =~ /\\.mdx?$/i",
+          "group": "navigation@30"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "markdownGo.openWith",
+          "when": "resourceLangId == markdown",
+          "group": "navigation@30"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "markdownGo.openWith",
+          "when": "resourceLangId == markdown",
+          "group": "navigation@30"
+        }
+      ]
+    },
     "configuration": {
       "title": "Markdown Go",
       "properties": {
