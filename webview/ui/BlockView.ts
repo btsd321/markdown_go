@@ -31,6 +31,8 @@ export interface BlockViewCallbacks {
   onInput(blockId: string, text: string): void;
   /** 点击行首 + 按钮 */
   onHandleClick(blockId: string, handle: HTMLElement): void;
+  /** 用户请求进入源码编辑（双击预览） */
+  onEnterEditing?(blockId: string): void;
   /**
    * 在内容元素上挂事件（键盘、剪贴板等）
    * Editor 通过这个回调把 KeyHandler / Clipboard 注入进来。
@@ -86,9 +88,15 @@ export function renderBlock(block: Block, cb: BlockViewCallbacks): BlockElement 
   if (needsPreview) {
     preview = document.createElement('div');
     preview.className = 'block-preview';
-    // 点击预览 → 进入编辑（聚焦源码）
-    preview.addEventListener('click', () => {
-      content.focus();
+    preview.title = '双击编辑源码';
+    // 单击：仅激活块（显示 + 按钮），不抢焦点、不进入编辑
+    preview.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      cb.onFocus(block.id);
+    });
+    // 双击：进入源码编辑模式
+    preview.addEventListener('dblclick', () => {
+      cb.onEnterEditing?.(block.id);
     });
     root.appendChild(preview);
   }

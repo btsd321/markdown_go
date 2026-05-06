@@ -170,11 +170,11 @@ body {
 .block.has-preview .block-preview {
   display: block;
 }
-/* 激活态：显示源码，隐藏预览 */
-.block.has-preview.is-active .block-content {
+/* 编辑态：显示源码，隐藏预览（双击预览进入；Enter 退出） */
+.block.has-preview.is-editing .block-content {
   display: block;
 }
-.block.has-preview.is-active .block-preview {
+.block.has-preview.is-editing .block-preview {
   display: none;
 }
 
@@ -210,6 +210,80 @@ body {
   height: 1px;
   background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
   margin: 4px 0;
+}
+
+/* ========== 模态对话框 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-dialog {
+  width: min(560px, 92vw);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal-title {
+  font-size: 1em;
+  font-weight: 600;
+}
+.modal-hint {
+  font-size: 0.8em;
+  color: var(--vscode-descriptionForeground);
+}
+.modal-textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  padding: 8px 10px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.95em;
+  outline: none;
+}
+.modal-textarea:focus {
+  border-color: var(--vscode-focusBorder);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.modal-btn {
+  padding: 4px 14px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.modal-btn-primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+.modal-btn-primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+.modal-btn-secondary {
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  border-color: var(--vscode-button-border, var(--vscode-panel-border));
+}
+.modal-btn-secondary:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
 
 /* ========== 纯文本 / 预览 视图 ========== */

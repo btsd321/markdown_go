@@ -14,6 +14,7 @@ import {
   DEFAULT_INSERT_MENU,
   InsertMenuItem,
 } from '../ui/InsertMenu';
+import { openPromptDialog } from '../ui/PromptDialog';
 import {
   getCaretOffset,
   setCaretOffset,
@@ -35,6 +36,8 @@ export interface EditorCallbacks {
 
 export class Editor {
   private activeBlockId: string | null = null;
+  /** 当前正在“源码编辑”的 fenced 块（latex / mermaid）。null 表示无。 */
+  private editingBlockId: string | null = null;
   private blockEls = new Map<string, HTMLElement>();
   private contentEls = new Map<string, HTMLElement>();
   private previewEls = new Map<string, HTMLElement>();
@@ -100,6 +103,7 @@ export class Editor {
         onFocus: (id) => this.setActive(id),
         onInput: (id, text) => this.handleInput(id, text),
         onHandleClick: (id, anchor) => this.openInsertMenu(id, anchor),
+        onEnterEditing: (id) => this.enterEditing(id),
         attachContentListeners: (id, el) => this.attachBlockListeners(id, el),
       });
       this.blockEls.set(b.id, root);
@@ -121,9 +125,13 @@ export class Editor {
       return;
     }
     const prev = this.activeBlockId;
+    // 切换激活块 → 退出其他块的编辑状态
+    if (this.editingBlockId && this.editingBlockId !== id) {
+      this.editingBlockId = null;
+    }
     this.activeBlockId = id;
     this.applyActiveClass();
-    // 离开 mermaid 块 → 触发预览刷新
+    // 离开预览块 → 重新渲染
     if (prev && this.previewEls.has(prev)) {
       this.refreshPreview(prev);
     }
@@ -132,7 +140,38 @@ export class Editor {
   private applyActiveClass(): void {
     this.blockEls.forEach((el, id) => {
       el.classList.toggle('is-active', id === this.activeBlockId);
+      el.classList.toggle('is-editing', id === this.editingBlockId);
     });
+  }
+
+  /** 进入 fenced 块的源码编辑模式 */
+  private enterEditing(id: string): void {
+    const block = this.model.getBlock(id);
+    if (!block) return;
+    if (block.type !== 'latex' && block.type !== 'mermaid') return;
+    this.activeBlockId = id;
+    this.editingBlockId = id;
+    this.applyActiveClass();
+    // 渲染后才能聚焦刚可见的 contenteditable
+    requestAnimationFrame(() => {
+      const el = this.contentEls.get(id);
+      if (el) {
+        el.focus();
+        setCaretToEnd(el);
+      }
+    });
+  }
+
+  /** 退出当前 fenced 块的编辑模式，重新渲染预览 */
+  private exitEditing(): void {
+    if (!this.editingBlockId) return;
+    const id = this.editingBlockId;
+    this.editingBlockId = null;
+    // 先 blur 避免 contenteditable 被隐藏后还保持焦点
+    const el = this.contentEls.get(id);
+    el?.blur?.();
+    this.applyActiveClass();
+    this.refreshPreview(id);
   }
 
   private focusBlock(id: string, caretOffset?: number): void {
@@ -256,6 +295,12 @@ export class Editor {
 
   // ============ 结构性编辑 ============
   private enterAfter(blockId: string): void {
+    // fenced 块编辑中 Enter → 提交并退出编辑模式
+    const block = this.model.getBlock(blockId);
+    if (block && (block.type === 'latex' || block.type === 'mermaid')) {
+      this.exitEditing();
+      return;
+    }
     this.flushPendingSnapshot();
     const newBlock: Block = { id: '', type: 'paragraph', content: '' };
     this.model.insertBlock(blockId, newBlock);
@@ -328,17 +373,41 @@ export class Editor {
   }
 
   private insertBlockAfter(blockId: string, item: InsertMenuItem): void {
+    // LaTeX / Mermaid：先弹出输入对话框，让用户粘贴源码
+    if (item.type === 'latex' || item.type === 'mermaid') {
+      const title = item.type === 'latex' ? '插入 LaTeX 公式' : '插入 Mermaid 图';
+      const placeholder =
+        item.type === 'latex'
+          ? '在此输入或粘贴 LaTeX 源码，例如：E = mc^2'
+          : '在此输入或粘贴 Mermaid 源码，例如：graph LR\\n  A --> B';
+      openPromptDialog({
+        title,
+        placeholder,
+        initial: item.initial ?? '',
+      }).then((value) => {
+        if (value === null) return; // 用户取消
+        this.commitInsert(blockId, { ...item, initial: value });
+      });
+      return;
+    }
+    this.commitInsert(blockId, item);
+  }
+
+  /** 真正执行块的插入或替换（当前块为空时直接转换类型） */
+  private commitInsert(blockId: string, item: InsertMenuItem): void {
     this.flushPendingSnapshot();
+    const isFenced = item.type === 'latex' || item.type === 'mermaid';
 
     const current = this.model.getBlock(blockId);
-    // 当前块为空：直接转换类型，避免无谓地新增空行
     if (current && current.content.length === 0) {
       this.silentUpdate(blockId, {
         type: item.type,
         content: item.initial ?? '',
       });
       this.render();
-      this.focusBlock(blockId);
+      // fenced 块直接显示预览，无需进入编辑
+      if (isFenced) this.setActive(blockId);
+      else this.focusBlock(blockId);
       this.history.push(this.captureSnapshot());
       this.scheduleSync();
       return;
@@ -351,7 +420,8 @@ export class Editor {
     };
     this.model.insertBlock(blockId, newBlock);
     this.render();
-    this.focusBlock(newBlock.id);
+    if (isFenced) this.setActive(newBlock.id);
+    else this.focusBlock(newBlock.id);
     this.history.push(this.captureSnapshot());
     this.scheduleSync();
   }
