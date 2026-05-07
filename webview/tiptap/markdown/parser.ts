@@ -13,6 +13,7 @@
 import type { Schema } from '@tiptap/pm/model';
 import { MarkdownParser } from 'prosemirror-markdown';
 import MarkdownIt from 'markdown-it';
+import { bridge } from '../../core/bridge';
 
 /** 块级 $$...$$ 公式插件 */
 function mathBlockPlugin(md: any): void {
@@ -352,6 +353,88 @@ function tableNormalizePlugin(md: any): void {
   });
 }
 
+/**
+ * 表格单元格内的 `<div align="X">…</div>` → 对应 paragraph_open 加 `data-text-align`
+ *
+ * 仅当一个单元格的 inline 内容首尾恰好是 `<div align="X">` / `</div>` 时生效（忽略首尾空白）。
+ * 必须在 colorSpanPlugin **之前** 运行（colorSpan 会把未识别的 html_inline 转成纯文本）。
+ *
+ * 依赖 tableNormalizePlugin 产出的 paragraph_open / paragraph_close 包装。两者都注册在
+ * 不同阶段（normalize 在 after('block')，本插件在 after('inline')），运行顺序天然满足。
+ */
+function tableCellAlignPlugin(md: any): void {
+  const OPEN = /^<div\s+align\s*=\s*"(left|center|right)"\s*>$/i;
+  const OPEN_SQ = /^<div\s+align\s*=\s*'(left|center|right)'\s*>$/i;
+  const CLOSE = /^<\/div>\s*$/i;
+  // ⚠️ 必须 `before('color_span')` 而非 `after('inline')`：markdown-it 的 ruler.after 同 anchor
+  // 时**后注册的规则反而先执行**，会被 colorSpanPlugin 的 html_inline→text 兜底先吞掉 div。
+  md.core.ruler.before('color_span', 'table_cell_align', (state: any) => {
+    const toks = state.tokens;
+    let cellsScanned = 0;
+    let cellsMatched = 0;
+    const samples: any[] = [];
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      if (t.type !== 'th_open' && t.type !== 'td_open') continue;
+      cellsScanned++;
+      const pOpen = toks[i + 1];
+      const inline = toks[i + 2];
+      if (!pOpen || pOpen.type !== 'paragraph_open') {
+        if (samples.length < 3) samples.push({ skip: 'no-pOpen', i, after: toks[i + 1]?.type });
+        continue;
+      }
+      if (!inline || inline.type !== 'inline' || !inline.children) {
+        if (samples.length < 3) samples.push({ skip: 'no-inline', i, after: toks[i + 2]?.type });
+        continue;
+      }
+      const ch = inline.children;
+      // 跳过首尾纯空白文本
+      let s = 0, e = ch.length - 1;
+      while (s <= e && ch[s].type === 'text' && ch[s].content.trim() === '') s++;
+      while (e >= s && ch[e].type === 'text' && ch[e].content.trim() === '') e--;
+      if (s >= e) {
+        if (samples.length < 3) samples.push({ skip: 'empty-or-single', s, e, n: ch.length });
+        continue;
+      }
+      const first = ch[s];
+      const last = ch[e];
+      if (first.type !== 'html_inline' || last.type !== 'html_inline') {
+        if (samples.length < 3) {
+          samples.push({
+            skip: 'not-html_inline-pair',
+            firstType: first.type, firstContent: first.content,
+            lastType: last.type, lastContent: last.content,
+            childTypes: ch.map((c: any) => c.type),
+          });
+        }
+        continue;
+      }
+      const m = OPEN.exec(first.content) || OPEN_SQ.exec(first.content);
+      if (!m) {
+        if (samples.length < 3) samples.push({ skip: 'open-not-match', content: first.content });
+        continue;
+      }
+      if (!CLOSE.test(last.content)) {
+        if (samples.length < 3) samples.push({ skip: 'close-not-match', content: last.content });
+        continue;
+      }
+      const align = m[1].toLowerCase();
+      if (typeof pOpen.attrSet === 'function') pOpen.attrSet('data-text-align', align);
+      else {
+        pOpen.attrs = pOpen.attrs || [];
+        pOpen.attrs.push(['data-text-align', align]);
+      }
+      ch.splice(e, 1);
+      ch.splice(s, 1);
+      cellsMatched++;
+    }
+    if (cellsScanned > 0 && cellsMatched > 0) {
+      bridge.log('info', '[tableCellAlignPlugin]', { cellsScanned, cellsMatched });
+    }
+    return true;
+  });
+}
+
 export function buildMarkdownParser(schema: Schema): MarkdownParser {
   // 启用 inline html，供 color_span 插件识别 <span style="color:...">
   const md = new MarkdownIt('commonmark', { html: true });
@@ -360,7 +443,10 @@ export function buildMarkdownParser(schema: Schema): MarkdownParser {
   try { md.disable(['html_block']); } catch { /* ignore */ }
   md.use(mathBlockPlugin);
   md.use(mermaidRoutePlugin);
+  // colorSpanPlugin 必须先 use（提供 'color_span' anchor），随后 tableCellAlignPlugin 用
+  // `before('color_span')` 把自己插到它前面，从而避免被 colorSpan 的 html_inline 兜底吞掉 div。
   md.use(colorSpanPlugin);
+  md.use(tableCellAlignPlugin);
   md.use(divAlignPlugin);
   md.use(videoBlockPlugin);
   md.use(tableNormalizePlugin);

@@ -18,6 +18,7 @@ import { ImageWithBase } from './nodes/ImageWithBase';
 import { VideoBlock } from './nodes/VideoBlock';
 import { MgTable, MgTableRow, MgTableHeader, MgTableCell } from './nodes/Table';
 import { AlignBackspace } from './extensions/AlignBackspace';
+import { EscapeInlineCode } from './extensions/EscapeInlineCode';
 import { buildMarkdownParser } from './markdown/parser';
 import { buildMarkdownSerializer } from './markdown/serializer';
 import { createBubbleMenu, BubbleMenuFactory } from './menus/BubbleMenu';
@@ -62,6 +63,8 @@ export class TiptapEditor {
   private syncTimer: number | null = null;
   /** 由 setMarkdown 触发的内部更新，不应再回写宿主 */
   private suppressSync = false;
+  /** bootstrap 完成前任何 onUpdate 都不可回写宿主，否则会把空 doc 当真实内容发出去覆盖文件 */
+  private bootstrapped = false;
 
   constructor(
     host: HTMLElement,
@@ -93,9 +96,12 @@ export class TiptapEditor {
         TextAlign.configure({
           types: ['paragraph', 'heading'],
           alignments: ['left', 'center', 'right'],
-          defaultAlignment: 'left',
+          // ⚠️ 不设 defaultAlignment，否则每个段落都会渲染 style="text-align:left"
+          // 会覆盖表格 td/th 的列对齐。null 让未设置段落不带 inline style。
+          defaultAlignment: null as any,
         }),
         AlignBackspace,
+        EscapeInlineCode,
         LatexBlock,
         MermaidBlock,
         ImageWithBase,
@@ -136,8 +142,11 @@ export class TiptapEditor {
     // 序列化结果会与 lastSentMarkdown 相同 → 跳过回写，
     // 避免「打开文件就被标 dirty / 被规范化覆盖」。
     const out = this.getMarkdown();
-    this.lastSentMarkdown = out;
     const normalized = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    // ⚠️ 若 serialize 出错（out=''），绝不能用 '' 锁住 lastSentMarkdown，
+    // 否则 onUpdate 比较时 '' === '' 跳过永远不再回写 + bootstrap 前已发的空内容也无法纠正。
+    // 退化为锁住输入 markdown，至少避免后续把错误的空字符串当成「最新已发」状态。
+    this.lastSentMarkdown = out.length > 0 ? out : normalized;
     if (out !== normalized) {
       this.cb.log?.('[TiptapEditor.bootstrap] roundtrip MISMATCH (lock to roundtrip output, no write-back)', {
         inLen: normalized.length,
@@ -147,6 +156,8 @@ export class TiptapEditor {
     } else {
       this.cb.log?.('[TiptapEditor.bootstrap] roundtrip OK', { len: out.length });
     }
+    // 解锁回写。任何在 bootstrap 之前排队的 setTimeout 在此之后才允许触发真正的 onSync。
+    this.bootstrapped = true;
   }
 
   /** 外部强制设置内容（如外部修改了文件） */
@@ -217,6 +228,11 @@ export class TiptapEditor {
     if (this.syncTimer !== null) return;
     this.syncTimer = window.setTimeout(() => {
       this.syncTimer = null;
+      // 守卫：bootstrap 前一切 onUpdate 都不允许回写宿主——否则空 doc 会覆盖文件。
+      if (!this.bootstrapped) {
+        this.cb.log?.('[TiptapEditor.scheduleSync] dropped (pre-bootstrap)');
+        return;
+      }
       const md = this.getMarkdown();
       // === DEBUG ===
       this.cb.log?.('[TiptapEditor.onUpdate->serialize]', {

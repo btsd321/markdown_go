@@ -133,27 +133,35 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
   // ---- 表格（GFM）----
   // 不支持单元格合并：colspan/rowspan 一律按 1 处理。
   // 首行强制为 header；列对齐取自 header 行各 cell 的 align attr。
+  // 单元格级对齐：段落 textAlign != left 时用 `<div align="X">…</div>` 包裹该段输出
+  // （GFM 标准只支持列对齐；该写法被 GitHub 等富 HTML 渲染器识别，纯 GFM 工具会回退到列对齐）。
   if (schema.nodes.table) {
-    /** 把单元格内容序列化为单行 markdown（行内格式保留，块间用 <br> 连接） */
+    /** 把单元格内容序列化为单行 markdown（行内格式保留，多段间用 <br> 连接） */
     const renderCellInline = (state: any, cell: any): string => {
-      const saved = { out: state.out, delim: state.delim, atBlank: state.atBlank };
-      state.out = '';
+      // ⚠️ 不要碰 state.atBlank —— 它是 prosemirror-markdown 的方法（this.atBlank()），
+      // 赋值会破坏后续 state.write 内部调用并导致整张表序列化崩溃 → 全文回写为空。
+      const saved = { out: state.out, delim: state.delim, closed: state.closed };
       state.delim = '';
-      state.atBlank = true;
+      state.closed = null;
       const parts: string[] = [];
       cell.forEach((child: any) => {
-        // 仅支持 paragraph / heading 内的 inline；其它块级压平为文本
-        if (child.type.name === 'paragraph' || child.type.name === 'heading') {
+        const name = child.type.name;
+        if (name === 'paragraph' || name === 'heading') {
           state.out = '';
           state.renderInline(child);
-          parts.push(state.out);
+          let inline = state.out;
+          const align = child.attrs?.textAlign;
+          if (align && align !== 'left' && inline.trim()) {
+            inline = `<div align="${align}">${inline}</div>`;
+          }
+          parts.push(inline);
         } else {
           parts.push(child.textContent);
         }
       });
       state.out = saved.out;
       state.delim = saved.delim;
-      state.atBlank = saved.atBlank;
+      state.closed = saved.closed;
       // GFM 单元格内禁止 \n / |，需转义
       return parts
         .join('<br>')

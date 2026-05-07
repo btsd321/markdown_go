@@ -108,7 +108,19 @@ const BLOCK_TYPES: BlockTypeItem[] = [
     key: 'code',
     getLabel: () => t('block.codeBlock'),
     isActive: (e) => e.isActive('codeBlock'),
-    apply: (e) => e.chain().focus().toggleCodeBlock().run(),
+    // 默认为 inline code（不换行）：在段落文本中有选区时切换 inline code mark；
+    // 仅在光标位于空段落 / 选区跨块 / 已是 codeBlock 时才切换 codeBlock。
+    apply: (e) => {
+      const { selection } = e.state;
+      const inCodeBlock = e.isActive('codeBlock');
+      const sameBlock = selection.$from.sameParent(selection.$to);
+      const parentEmpty = selection.$from.parent.content.size === 0;
+      if (inCodeBlock || !sameBlock || parentEmpty) {
+        e.chain().focus().toggleCodeBlock().run();
+      } else {
+        e.chain().focus().toggleCode().run();
+      }
+    },
   },
   {
     key: 'merge-ul',
