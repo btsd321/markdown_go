@@ -116,11 +116,19 @@ function colorSpanPlugin(md: any): void {
         }
       }
       // 剩余未识别的 html_inline 转为纯文本，避免 PM 解析报 "Token type not supported"
+      // 特例：<br> 转为 hardbreak token，确保表格单元格内换行能正确还原
       for (const t of blk.children) {
         if (t.type === 'html_inline') {
-          t.type = 'text';
-          t.tag = '';
-          t.nesting = 0;
+          if (/^<br\s*\/?>$/i.test(t.content.trim())) {
+            t.type = 'hardbreak';
+            t.tag = 'br';
+            t.nesting = 0;
+            t.content = '';
+          } else {
+            t.type = 'text';
+            t.tag = '';
+            t.nesting = 0;
+          }
         }
       }
     }

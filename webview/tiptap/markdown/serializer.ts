@@ -163,8 +163,10 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
       state.delim = saved.delim;
       state.closed = saved.closed;
       // GFM 单元格内禁止 \n / |，需转义
+      // hardBreak 节点经 renderInline 输出为 " \\\n"（space + backslash + newline），先替换为 <br>
       return parts
         .join('<br>')
+        .replace(/\s*\\\n/g, '<br>')
         .replace(/\r?\n/g, '<br>')
         .replace(/\|/g, '\\|')
         .trim() || ' ';
