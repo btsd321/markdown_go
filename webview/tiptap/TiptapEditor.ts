@@ -16,6 +16,7 @@ import { LatexBlock } from './nodes/LatexBlock';
 import { MermaidBlock } from './nodes/MermaidBlock';
 import { ImageWithBase } from './nodes/ImageWithBase';
 import { VideoBlock } from './nodes/VideoBlock';
+import { MgTable, MgTableRow, MgTableHeader, MgTableCell } from './nodes/Table';
 import { AlignBackspace } from './extensions/AlignBackspace';
 import { buildMarkdownParser } from './markdown/parser';
 import { buildMarkdownSerializer } from './markdown/serializer';
@@ -25,6 +26,7 @@ import { createBlockHandle, BlockHandleController } from './menus/BlockHandle';
 import { createContextMenu, ContextMenuController } from './menus/ContextMenu';
 import { createClipboardCopy, ClipboardCopyController } from './menus/ClipboardCopy';
 import { createSmartPaste, SmartPasteController } from './menus/SmartPaste';
+import { createTableToolbar, TableToolbarController } from './menus/TableToolbar';
 import type { CopyFormat } from '../../shared';
 
 export interface TiptapEditorCallbacks {
@@ -53,6 +55,7 @@ export class TiptapEditor {
   private contextMenu: ContextMenuController;
   private clipboardCopy: ClipboardCopyController;
   private smartPaste: SmartPasteController;
+  private tableToolbar: TableToolbarController;
 
   /** 上次主动写出的 markdown，用于回灌时识别 echo */
   private lastSentMarkdown: string | null = null;
@@ -76,6 +79,7 @@ export class TiptapEditor {
       getSerializer: () => this.serializer,
     });
     this.smartPaste = createSmartPaste({ getParser: () => this.parser });
+    this.tableToolbar = createTableToolbar();
 
     this.editor = new TiptapCore({
       element: host,
@@ -96,12 +100,17 @@ export class TiptapEditor {
         MermaidBlock,
         ImageWithBase,
         VideoBlock,
+        MgTable,
+        MgTableRow,
+        MgTableHeader,
+        MgTableCell,
         this.bubbleMenu.extension,
         this.slashMenu.extension,
         this.blockHandle.extension,
         this.contextMenu.extension,
         this.clipboardCopy.extension,
         this.smartPaste.extension,
+        this.tableToolbar.extension,
       ],
       content: '',
       autofocus: false,
@@ -116,6 +125,7 @@ export class TiptapEditor {
     this.contextMenu.bind(this.editor);
     this.clipboardCopy.bind(this.editor);
     this.smartPaste.bind(this.editor);
+    this.tableToolbar.bind(this.editor);
   }
 
   /** 用初始 markdown 启动 */
@@ -183,6 +193,7 @@ export class TiptapEditor {
     this.slashMenu.destroy();
     this.blockHandle.destroy();
     this.contextMenu.destroy();
+    this.tableToolbar.destroy();
     this.editor.destroy();
   }
 

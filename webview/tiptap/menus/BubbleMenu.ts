@@ -257,6 +257,7 @@ export function createBubbleMenu(): BubbleMenuFactory {
   typeBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (typeBtn.disabled) return;
     if (typeMenuOpen) closeTypeMenu();
     else openTypeMenu();
   });
@@ -441,6 +442,14 @@ export function createBubbleMenu(): BubbleMenuFactory {
 
   function refreshActive() {
     if (!editorRef) return;
+    // 表格内禁止切换块类型（GFM 单元格不允许 heading / list / quote / codeBlock 等块），
+    // 把"块类型"按钮置灰禁用；若菜单正打开则强制关闭。
+    const inTable = editorRef.isActive('table');
+    typeBtn.disabled = inTable;
+    typeBtn.classList.toggle('is-disabled', inTable);
+    typeBtn.title = inTable ? t('bubble.typeBtnDisabledInTable') : t('bubble.typeBtnTitle');
+    if (inTable && typeMenuOpen) closeTypeMenu();
+
     let activeLabel = t('block.paragraph');
     for (const { item, el } of typeItemEls) {
       const active = item.isActive ? item.isActive(editorRef) : false;

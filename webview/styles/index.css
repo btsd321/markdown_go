@@ -471,6 +471,17 @@ body {
   background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
   color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
 }
+.bubble-btn:disabled,
+.bubble-btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--vscode-disabledForeground, var(--vscode-foreground));
+}
+.bubble-btn:disabled:hover,
+.bubble-btn.is-disabled:hover {
+  background: transparent;
+}
 
 .bubble-inline-btn {
   font-weight: 600;
@@ -762,5 +773,148 @@ body.mg-readonly .mg-block-handle,
 body.mg-readonly .mg-block-handle-menu,
 body.mg-readonly .bubble-menu,
 body.mg-readonly .slash-menu {
+  display: none !important;
+}
+
+/* ========== 表格（GFM） ========== */
+.tiptap-host .ProseMirror table,
+.tiptap-host .mg-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.4em 0;
+  overflow: hidden;
+}
+.tiptap-host .ProseMirror table td,
+.tiptap-host .ProseMirror table th {
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+  min-width: 60px;
+}
+.tiptap-host .ProseMirror table th {
+  background: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.08));
+  font-weight: 600;
+}
+.tiptap-host .ProseMirror table p {
+  margin: 0;
+}
+/* 列宽拖拽把手（prosemirror-tables） */
+.tiptap-host .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--vscode-focusBorder, #007fd4);
+  pointer-events: none;
+  opacity: 0.6;
+}
+.tiptap-host .ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+/* 当前选中的单元格高亮（prosemirror-tables 的 CellSelection） */
+.tiptap-host .ProseMirror .selectedCell {
+  background: rgba(64, 128, 255, 0.18);
+}
+.tiptap-host .ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+}
+/* prosemirror-tables 默认会用 .tableWrapper 包裹 */
+.tiptap-host .ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 0.4em 0;
+}
+
+/* ========== 表格大小选择对话框 ========== */
+.mg-table-picker {
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+}
+.mg-table-picker-title {
+  font-size: 0.95em;
+  font-weight: 600;
+}
+.mg-table-picker-label {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+.mg-table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 8), 22px);
+  gap: 3px;
+}
+.mg-table-picker-cell {
+  width: 22px;
+  height: 18px;
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.4));
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+.mg-table-picker-cell.is-active {
+  background: var(--vscode-focusBorder, #007fd4);
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+.mg-table-picker-hint {
+  font-size: 0.75em;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+/* ========== 表格悬浮工具栏 ========== */
+.mg-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.mg-table-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  color: var(--vscode-foreground);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.mg-table-toolbar-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+.mg-table-toolbar-btn.is-active {
+  background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.mg-table-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--vscode-panel-border, rgba(128, 128, 128, 0.3));
+  margin: 0 3px;
+}
+body.mg-readonly .mg-table-toolbar,
+body.mg-readonly .mg-table-picker-overlay {
   display: none !important;
 }

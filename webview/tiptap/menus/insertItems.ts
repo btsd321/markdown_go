@@ -10,6 +10,7 @@ import type { Editor } from '@tiptap/core';
 import { openPromptDialog } from '../../ui/PromptDialog';
 import { openImageDialog } from '../../ui/ImageDialog';
 import { openVideoDialog } from '../../ui/VideoDialog';
+import { openTablePicker } from '../../ui/TablePicker';
 import { t } from '../../i18n';
 
 export interface InsertItem {
@@ -185,6 +186,21 @@ export function getInsertItems(): InsertItem[] {
               height: null,
             },
           })
+          .run();
+      },
+    },
+    {
+      key: 'table',
+      label: t('block.table'),
+      hint: '▦',
+      keywords: ['table', 'grid', '表格', 'biaoge'],
+      run: async (e) => {
+        const result = await openTablePicker();
+        if (!result) return;
+        // 用 Tiptap 内置命令；首行 header
+        e.chain()
+          .focus()
+          .insertTable({ rows: result.rows, cols: result.cols, withHeaderRow: true })
           .run();
       },
     },

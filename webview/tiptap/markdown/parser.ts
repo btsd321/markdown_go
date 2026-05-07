@@ -287,10 +287,75 @@ function videoBlockPlugin(md: any): void {
   );
 }
 
+/**
+ * GFM 表格 token 规范化：
+ *   markdown-it 的表格 token 流为
+ *     table_open
+ *       thead_open / tr_open / th_open / inline / th_close / ... / tr_close / thead_close
+ *       tbody_open / tr_open / td_open / inline / td_close / ... / tr_close / ... / tbody_close
+ *     table_close
+ *
+ *   而 prosemirror-tables / Tiptap 的结构是 `table > tableRow > (tableHeader|tableCell)`
+ *   并要求单元格内是 `block+`（必须是 paragraph 等块）。因此本插件做两件事：
+ *     1) 删除 thead_open / thead_close / tbody_open / tbody_close（直接拍平）
+ *     2) 把 th/td 单元格内"裸 inline"包成 paragraph_open + inline + paragraph_close
+ *     3) 从 th/td 的 style="text-align:..." 提取 align 写到自定义 attrs（供 token-spec 读取）
+ */
+function tableNormalizePlugin(md: any): void {
+  md.core.ruler.after('block', 'table_normalize', (state: any) => {
+    const src = state.tokens;
+    const out: any[] = [];
+    for (let i = 0; i < src.length; i++) {
+      const t = src[i];
+      // 拍平 thead/tbody
+      if (
+        t.type === 'thead_open' || t.type === 'thead_close' ||
+        t.type === 'tbody_open' || t.type === 'tbody_close'
+      ) continue;
+
+      // 提取 align（来自 style="text-align:left|center|right"）
+      if (t.type === 'th_open' || t.type === 'td_open') {
+        const style = (typeof t.attrGet === 'function' ? t.attrGet('style') : null) || '';
+        const m = /text-align\s*:\s*(left|center|right)/i.exec(style);
+        if (m) {
+          if (typeof t.attrSet === 'function') t.attrSet('data-align', m[1].toLowerCase());
+          else {
+            t.attrs = t.attrs || [];
+            t.attrs.push(['data-align', m[1].toLowerCase()]);
+          }
+        }
+      }
+
+      out.push(t);
+
+      // 在 th_open / td_open 之后插入 paragraph_open；遇到对应 close 之前插入 paragraph_close
+      if (t.type === 'th_open' || t.type === 'td_open') {
+        const pOpen = new state.Token('paragraph_open', 'p', 1);
+        pOpen.block = true;
+        pOpen.hidden = true; // 不影响输出但保留语义
+        out.push(pOpen);
+      }
+      // 处理 close 在下一轮：如果下一个是 th_close / td_close，则在 push 之前补一个 paragraph_close
+      const nxt = src[i + 1];
+      if (
+        (t.type === 'inline' || t.type === 'th_open' || t.type === 'td_open') &&
+        nxt && (nxt.type === 'th_close' || nxt.type === 'td_close')
+      ) {
+        const pClose = new state.Token('paragraph_close', 'p', -1);
+        pClose.block = true;
+        pClose.hidden = true;
+        out.push(pClose);
+      }
+    }
+    state.tokens = out;
+    return true;
+  });
+}
+
 export function buildMarkdownParser(schema: Schema): MarkdownParser {
   // 启用 inline html，供 color_span 插件识别 <span style="color:...">
   const md = new MarkdownIt('commonmark', { html: true });
-  md.enable(['strikethrough']);
+  md.enable(['strikethrough', 'table']);
   // 禁用块级 html 解析，避免 html_block token 进入 schema（无对应节点）
   try { md.disable(['html_block']); } catch { /* ignore */ }
   md.use(mathBlockPlugin);
@@ -298,6 +363,7 @@ export function buildMarkdownParser(schema: Schema): MarkdownParser {
   md.use(colorSpanPlugin);
   md.use(divAlignPlugin);
   md.use(videoBlockPlugin);
+  md.use(tableNormalizePlugin);
 
   // 完整 token-spec；运行时若 schema 中无对应节点/mark，会被剔除
   const allTokens: Record<string, any> = {
@@ -372,6 +438,22 @@ export function buildMarkdownParser(schema: Schema): MarkdownParser {
     color: {
       mark: 'textStyle',
       getAttrs: (tok: any) => ({ color: tok.attrGet('color') }),
+    },
+    table: { block: 'table' },
+    tr: { block: 'tableRow' },
+    th: {
+      block: 'tableHeader',
+      getAttrs: (tok: any) => {
+        const a = typeof tok.attrGet === 'function' ? tok.attrGet('data-align') : null;
+        return a ? { align: a } : {};
+      },
+    },
+    td: {
+      block: 'tableCell',
+      getAttrs: (tok: any) => {
+        const a = typeof tok.attrGet === 'function' ? tok.attrGet('data-align') : null;
+        return a ? { align: a } : {};
+      },
     },
   };
 

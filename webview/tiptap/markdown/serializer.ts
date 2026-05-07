@@ -130,6 +130,86 @@ export function buildMarkdownSerializer(schema: Schema): MarkdownSerializer {
     };
   }
 
+  // ---- 表格（GFM）----
+  // 不支持单元格合并：colspan/rowspan 一律按 1 处理。
+  // 首行强制为 header；列对齐取自 header 行各 cell 的 align attr。
+  if (schema.nodes.table) {
+    /** 把单元格内容序列化为单行 markdown（行内格式保留，块间用 <br> 连接） */
+    const renderCellInline = (state: any, cell: any): string => {
+      const saved = { out: state.out, delim: state.delim, atBlank: state.atBlank };
+      state.out = '';
+      state.delim = '';
+      state.atBlank = true;
+      const parts: string[] = [];
+      cell.forEach((child: any) => {
+        // 仅支持 paragraph / heading 内的 inline；其它块级压平为文本
+        if (child.type.name === 'paragraph' || child.type.name === 'heading') {
+          state.out = '';
+          state.renderInline(child);
+          parts.push(state.out);
+        } else {
+          parts.push(child.textContent);
+        }
+      });
+      state.out = saved.out;
+      state.delim = saved.delim;
+      state.atBlank = saved.atBlank;
+      // GFM 单元格内禁止 \n / |，需转义
+      return parts
+        .join('<br>')
+        .replace(/\r?\n/g, '<br>')
+        .replace(/\|/g, '\\|')
+        .trim() || ' ';
+    };
+
+    const collectAligns = (table: any): (string | null)[] => {
+      const aligns: (string | null)[] = [];
+      const firstRow = table.firstChild;
+      if (!firstRow) return aligns;
+      firstRow.forEach((cell: any) => {
+        const a = cell.attrs?.align;
+        aligns.push(a === 'left' || a === 'center' || a === 'right' ? a : null);
+      });
+      return aligns;
+    };
+
+    const sepFor = (a: string | null): string => {
+      if (a === 'left') return ':---';
+      if (a === 'center') return ':---:';
+      if (a === 'right') return '---:';
+      return '---';
+    };
+
+    nodes.table = (state: any, node: any) => {
+      const aligns = collectAligns(node);
+      let firstRow = true;
+      node.forEach((row: any) => {
+        const cells: string[] = [];
+        let i = 0;
+        row.forEach((cell: any) => {
+          cells.push(renderCellInline(state, cell));
+          i++;
+        });
+        // 列数对齐到 header 列数（多删少补空）
+        while (cells.length < aligns.length) cells.push(' ');
+        if (cells.length > aligns.length) cells.length = aligns.length;
+        state.write('| ' + cells.join(' | ') + ' |');
+        state.write('\n');
+        if (firstRow) {
+          state.write('| ' + aligns.map(sepFor).join(' | ') + ' |');
+          state.write('\n');
+          firstRow = false;
+        }
+      });
+      state.closeBlock(node);
+    };
+    // 行 / 单元格自身不直接被 walker 调用（由 table 的 forEach 处理），但 PM 序列化器会
+    // 对未出现的节点抛错 → 注册空 noop，仅为通过 schema 检查。
+    nodes.tableRow = () => {};
+    nodes.tableHeader = () => {};
+    nodes.tableCell = () => {};
+  }
+
   // 删除 schema 中不存在的节点处理器，避免 PM 序列化时找不到
   for (const k of Object.keys(nodes)) {
     if (!schema.nodes[k]) delete nodes[k];
